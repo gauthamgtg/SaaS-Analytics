@@ -1,62 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Subscription Analytics</title>
+    <title>Customer Analytics</title>
 </head>
 <body>
-    <h1>Customer List</h1>
+    <h1>Customer Analytics Dashboard</h1>
 
-    <!-- Key Metrics Section -->
-    <h2>Key Metrics</h2>
-    <h2>Churn Rate Over Time</h2>
-    <div id="churn-rate-chart">
-        {{ churn_rate_chart | safe }}
+    <!-- Display Metrics -->
+    <div>
+        <h3>Key Metrics</h3>
+        <p><strong>Churn Rate (Last 30 Days):</strong> {{ churn_rate }}%</p>
+        <p><strong>Total Active Customers:</strong> {{ active_customers }}</p>
+        <p><strong>Total Monthly Spend:</strong> ${{ total_spend }}</p>
+        <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     </div>
 
-    <h2>Total Monthly Spend Over Time</h2>
-    <div id="monthly-spend-chart">
-        {{ monthly_spend_chart | safe }}
-    </div>
-    <p><strong>Active Customers:</strong> {{ active_customers }}</p>
-    <p><strong>Total Monthly Spend:</strong> ${{ total_spend }}</p>
-    <p><strong>Churn Rate:</strong> {{ churn_rate }}%</p>
-
-    <!-- Customer List Section -->
-    <h2>Customers</h2>
-    <table border="1">
+    <!-- Customer List Table -->
+    <h2>Customer List</h2>
+    <table>
         <thead>
             <tr>
                 <th>Name</th>
                 <th>Subscription Start</th>
                 <th>Subscription End</th>
                 <th>Monthly Spend</th>
+                <th>Active Status</th>  <!-- New column for active status -->
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-        {% for customer in customers %}
-            <tr>
-                <td>{{ customer.name }}</td>
-                <td>{{ customer.subscription_start }}</td>
-                <td>
-                    {% if customer.subscription_end %}
-                        {{ customer.subscription_end }}
-                    {% else %}
-                        Active
-                    {% endif %}
-                </td>
-                <td>${{ customer.monthly_spend }}</td>
-                <td>
-                    <!-- Add Delete Link -->
-                    <!-- Add Edit Link -->
-                    <a href="{{ url_for('edit_customer', id=customer.id) }}">Edit</a>
-                    <a href="{{ url_for('delete_customer', id=customer.id) }}">Delete</a>
-                </td>                
-            </tr>
-        {% endfor %}
+            {% for customer in customers %}
+                <tr>
+                    <td>{{ customer.name }}</td>
+                    <td>{{ customer.subscription_start }}</td>
+                    <td>{{ customer.subscription_end or 'Active' }}</td>
+                    <td>${{ customer.monthly_spend }}</td>
+                    <td>
+                        {% if customer.is_active %}
+                            <span style="color:green;">Active</span>
+                        {% else %}
+                            <span style="color:red;">Churned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('edit_customer', id=customer.id) }}">Edit</a>
+                        <a href="{{ url_for('delete_customer', id=customer.id) }}">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
         </tbody>
     </table>
 
+    <!-- Add New Customer Button -->
     <a href="/add">Add New Customer</a>
+    <div>
+        <h2>Monthly Spend by Customer</h2>
+        {{ graph_html|safe }}
+    </div>
+</div>
+<div class="container mt-5">
+    <h1>Dashboard</h1>
+    <div>
+        <h2>Monthly Spend by Customer</h2>
+        {{ graph_html|safe }}
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+
 </body>
 </html>

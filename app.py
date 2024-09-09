@@ -3,6 +3,11 @@ from flask_sqlalchemy import SQLAlchemy
 import datetime
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
+import plotly.express as px
+import csv
+from io import StringIO
+from flask import Response
+
 
 app = Flask(__name__)
 
@@ -18,7 +23,7 @@ class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     subscription_start = db.Column(db.Date, nullable=False)
-    subscription_end = db.Column(db.Date, nullable=True)  # Nullable if the subscription is still active
+    subscription_end = db.Column(db.Date, nullable=False)  # End date is now mandatory
     monthly_spend = db.Column(db.Float, nullable=False)
 
     def __repr__(self):
@@ -29,33 +34,43 @@ class Customer(db.Model):
 def home():
     customers = Customer.query.all()
 
-    # Calculate the number of active customers (those without a subscription_end)
-    active_customers = Customer.query.filter(Customer.subscription_end == None).count()
+    # Get today's date
+    today = datetime.today().date()
 
-    # Calculate the total monthly spend
-    total_spend = db.session.query(db.func.sum(Customer.monthly_spend)).scalar()
+    # Prepare a list of customers with their active status
+    customer_data = []
+    for customer in customers:
+        # Check if today's date is before or on the subscription end date
+        is_active = today <= customer.subscription_end
 
-    # Define the date range for churn calculation (last 30 days)
-    today = datetime.today()
+        customer_data.append({
+            'id': customer.id,
+            'name': customer.name,
+            'subscription_start': customer.subscription_start,
+            'subscription_end': customer.subscription_end,
+            'monthly_spend': customer.monthly_spend,
+            'is_active': is_active
+        })
+
+    # Calculate active customers, churn rate, etc.
+    active_customers = sum(1 for customer in customer_data if customer['is_active'])
+    total_spend = sum(customer['monthly_spend'] for customer in customer_data)
+    
     last_month = today - timedelta(days=30)
-
-    # Calculate churned customers in the past month
     churned_customers_last_month = Customer.query.filter(
-        Customer.subscription_end != None,  # Ended subscriptions
-        Customer.subscription_end >= last_month,  # Only within the past month
-        Customer.subscription_end <= today  # Up to today
+        Customer.subscription_end < today, 
+        Customer.subscription_end >= last_month
     ).count()
-
-    # Calculate total customers who were active at the beginning of the period (last month)
+    
     total_customers_last_month = Customer.query.filter(
-        Customer.subscription_start <= last_month  # Customers who were active 30 days ago
+        Customer.subscription_start <= last_month, 
+        Customer.subscription_end >= last_month
     ).count()
 
-    # Calculate churn rate for the last month
     churn_rate = (churned_customers_last_month / total_customers_last_month) * 100 if total_customers_last_month > 0 else 0
 
     return render_template('index.html', 
-                           customers=customers, 
+                           customers=customer_data, 
                            active_customers=active_customers, 
                            total_spend=total_spend, 
                            churn_rate=churn_rate)
@@ -103,6 +118,40 @@ def edit_customer(id):
     # GET request: render edit form with existing customer data
     return render_template('edit.html', customer=customer)
 
+
+@app.route('/dashboard')
+def dashboard():
+    # Fetch data from the database
+    data = Customer.query.all()
+
+    # Convert data to a suitable format for Plotly
+    if not data:
+        return render_template('dashboard.html', graph_html='No data available')
+
+    names = [customer.name for customer in data]
+    spends = [customer.monthly_spend for customer in data]
+
+    # Create a DataFrame for Plotly
+    import pandas as pd
+    df = pd.DataFrame({'Name': names, 'Monthly Spend': spends})
+
+    # Create the bar chart
+    fig = px.bar(df, x='Name', y='Monthly Spend', title='Monthly Spend by Customer')
+    graph_html = fig.to_html(full_html=False)
+
+    return render_template('dashboard.html', graph_html=graph_html)
+
+
+@app.route('/export')
+def export():
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Subscription Start', 'Subscription End', 'Monthly Spend'])
+    for customer in Customer.query.all():
+        writer.writerow([customer.name, customer.subscription_start, customer.subscription_end, customer.monthly_spend])
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=customers.csv"
+    return response
 
 def generate_churn_rate_chart():
     # Query data for churn rate over time (example: monthly churn rate for the past year)

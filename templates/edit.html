@@ -14,7 +14,7 @@
         <input type="date" id="subscription_start" name="subscription_start" value="{{ customer.subscription_start }}" required><br>
 
         <label for="subscription_end">Subscription End (Leave blank if active):</label>
-        <input type="date" id="subscription_end" name="subscription_end" value="{{ customer.subscription_end }}"><br>
+        <input type="date" id="subscription_end" name="subscription_end" value="{{ customer.subscription_end }}" required><br>
 
         <label for="monthly_spend">Monthly Spend:</label>
         <input type="number" id="monthly_spend" name="monthly_spend" value="{{ customer.monthly_spend }}" step="0.01" required><br>
