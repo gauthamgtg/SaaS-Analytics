@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Subscription Analytics</title>
+</head>
+<body>
+    <h1>Customer List</h1>
+
+    <h2>Customers</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Subscription Start</th>
+                <th>Subscription End</th>
+                <th>Monthly Spend</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for customer in customers %}
+            <tr>
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.subscription_start }}</td>
+                <td>
+                    {% if customer.subscription_end %}
+                        {{ customer.subscription_end }}
+                    {% else %}
+                        Active
+                    {% endif %}
+                </td>
+                <td>${{ customer.monthly_spend }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/add">Add New Customer</a>
+</body>
+</html>
