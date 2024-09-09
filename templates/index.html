@@ -8,6 +8,15 @@
 
     <!-- Key Metrics Section -->
     <h2>Key Metrics</h2>
+    <h2>Churn Rate Over Time</h2>
+    <div id="churn-rate-chart">
+        {{ churn_rate_chart | safe }}
+    </div>
+
+    <h2>Total Monthly Spend Over Time</h2>
+    <div id="monthly-spend-chart">
+        {{ monthly_spend_chart | safe }}
+    </div>
     <p><strong>Active Customers:</strong> {{ active_customers }}</p>
     <p><strong>Total Monthly Spend:</strong> ${{ total_spend }}</p>
     <p><strong>Churn Rate:</strong> {{ churn_rate }}%</p>
