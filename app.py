@@ -71,5 +71,22 @@ def delete_customer(id):
     return redirect(url_for('home'))  # Redirect back to the homepage
 
 
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit_customer(id):
+    customer = Customer.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        # Update customer details from form input
+        customer.name = request.form['name']
+        customer.subscription_start = request.form['subscription_start']
+        customer.subscription_end = request.form['subscription_end'] or None  # Handle empty input for active customers
+        customer.monthly_spend = request.form['monthly_spend']
+
+        db.session.commit()  # Save changes
+        return redirect(url_for('home'))  # Redirect back to homepage after update
+
+    # GET request: render edit form with existing customer data
+    return render_template('edit.html', customer=customer)
+
 if __name__ == '__main__':
     app.run(debug=True)
