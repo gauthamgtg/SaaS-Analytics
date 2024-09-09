@@ -26,8 +26,25 @@ class Customer(db.Model):
 # Basic route to display homepage
 @app.route('/')
 def home():
-    customers = Customer.query.all()  # Fetch all customers
-    return render_template('index.html', customers=customers)
+    customers = Customer.query.all()
+
+    # Calculate the number of active customers (those without a subscription_end)
+    active_customers = Customer.query.filter(Customer.subscription_end == None).count()
+
+    # Calculate the total monthly spend
+    total_spend = db.session.query(db.func.sum(Customer.monthly_spend)).scalar()
+
+    # Calculate churn rate: churned customers / total customers
+    total_customers = Customer.query.count()
+    churned_customers = Customer.query.filter(Customer.subscription_end != None).count()
+    churn_rate = (churned_customers / total_customers) * 100 if total_customers > 0 else 0
+
+    return render_template('index.html', 
+                           customers=customers, 
+                           active_customers=active_customers, 
+                           total_spend=total_spend, 
+                           churn_rate=churn_rate)
+
 
 # Route to add a new customer
 @app.route('/add', methods=['GET', 'POST'])
@@ -45,6 +62,14 @@ def add_customer():
         return redirect(url_for('home'))
 
     return render_template('add_customer.html')
+
+@app.route('/delete/<int:id>')
+def delete_customer(id):
+    customer = Customer.query.get_or_404(id)  # Fetch customer by ID or return 404
+    db.session.delete(customer)  # Delete the customer
+    db.session.commit()  # Commit the change
+    return redirect(url_for('home'))  # Redirect back to the homepage
+
 
 if __name__ == '__main__':
     app.run(debug=True)
