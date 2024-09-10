@@ -355,15 +355,31 @@ def dashboard():
 
     return render_template('dashboard.html', graph_html=graph_html)
 
-@app.route('/customers')
+@app.route('/customers', methods=['GET', 'POST'])
 def show_customers():
-    customers = Customer.query.all()
-    return render_template('customers.html', customers=customers)
+    # Get filter inputs from the request
+    search_query = request.args.get('search', '')
+    
+    # Apply filters based on the search query
+    customers = Customer.query.filter(
+        Customer.name.ilike(f"%{search_query}%") | Customer.email.ilike(f"%{search_query}%")
+    ).all()
+    
+    return render_template('customers.html', customers=customers, search_query=search_query)
 
-@app.route('/subscriptions')
+@app.route('/subscriptions', methods=['GET', 'POST'])
 def show_subscriptions():
-    subscriptions = Subscription.query.all()
-    return render_template('subscriptions.html', subscriptions=subscriptions)
+    # Get filter inputs from the request
+    search_query = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+
+    # Apply filters for search query and status
+    subscriptions = Subscription.query.join(Customer).filter(
+        (Subscription.status.ilike(f"%{status_filter}%")) &
+        (Customer.name.ilike(f"%{search_query}%"))
+    ).all()
+    
+    return render_template('subscriptions.html', subscriptions=subscriptions, search_query=search_query, status_filter=status_filter)
 
 
 # Export Data Route

@@ -6,7 +6,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Subscription List</h1>
+    <h1 style="text-align: center;">Subscription List</h1>
+
+    <!-- Filter Section -->
+    <form method="GET" action="/subscriptions" class="filter-form">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search by customer name" class="filter-input">
+        <select name="status" class="filter-input">
+            <option value="">All Statuses</option>
+            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+        <button type="submit" class="filter-btn">Filter</button>
+    </form>
 
     <!-- Table to display subscriptions -->
     <table>
@@ -33,5 +44,57 @@
 
     <!-- Button to add a new subscription -->
     <a href="/add_subscription" class="btn">Add New Subscription</a>
+
+    <style>
+        .filter-form {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .filter-input {
+            padding: 10px;
+            width: 200px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .filter-btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .filter-btn:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        table th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </body>
 </html>
