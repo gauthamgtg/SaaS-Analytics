@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive World Map</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar for selecting map data -->
+    <div class="sidebar">
+        <h2>Map Options</h2>
+        <ul>
+            <li><a href="/map?data_type=customers" class="{% if data_type == 'customers' %}active{% endif %}">Number of Customers</a></li>
+            <li><a href="/map?data_type=active_customers" class="{% if data_type == 'active_customers' %}active{% endif %}">Number of Active Customers</a></li>
+            <li><a href="/map?data_type=avg_revenue" class="{% if data_type == 'avg_revenue' %}active{% endif %}">Average Revenue per Customer</a></li>
+            <li><a href="/map?data_type=total_revenue" class="{% if data_type == 'total_revenue' %}active{% endif %}">Total Customer Revenue</a></li>
+        </ul>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map" style="width: 80%; margin-left: 20%; padding-top: 20px;"></div>
+
+    <!-- Overlay Container for overall stats -->
+    <div class="overlay">
+        <div class="overlay-box">
+            <p>Total Customers</p>
+            <h3>{{ overall_stats.total_customers }}</h3>
+        </div>
+        <div class="overlay-box">
+            <p>Active Customers</p>
+            <h3>{{ overall_stats.active_customers }}</h3>
+        </div>
+        <div class="overlay-box">
+            <p>Avg Revenue per Customer</p>
+            <h3>${{ overall_stats.avg_revenue | round(2) }}</h3>
+        </div>
+        <div class="overlay-box">
+            <p>Total Revenue</p>
+            <h3>${{ overall_stats.total_revenue }}</h3>
+        </div>
+    </div>
+
+    <script>
+        // Data for the map (passed from backend)
+        const data = {{ data | tojson }};
+        
+        // Prepare the map data
+        const mapData = [{
+            type: 'choropleth',
+            locationmode: 'country names',
+            locations: Object.keys(data),
+            z: Object.values(data),
+            text: Object.keys(data),
+            colorscale: 'Blues',
+            autocolorscale: false,
+            reversescale: true,
+            marker: {
+                line: {
+                    color: 'rgb(180,180,180)',
+                    width: 0.5
+                }
+            },
+            colorbar: {
+                title: 'Data'
+            }
+        }];
+
+        // Layout for the map
+        const layout = {
+            title: '{{ data_type.replace("_", " ").title() }} by Country',
+            geo: {
+                showframe: false,
+                showcoastlines: false,
+                projection: {
+                    type: 'mercator'
+                }
+            }
+        };
+
+        // Render the map using Plotly
+        Plotly.newPlot('map', mapData, layout);
+    </script>
+
+    <style>
+        /* Sidebar styles */
+        .sidebar {
+            position: fixed;
+            width: 20%;
+            height: 100%;
+            background-color: #f8f9fa;
+            padding: 20px;
+            box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul li a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 16px;
+            padding: 10px 15px;
+            display: block;
+            border-radius: 5px;
+        }
+
+        .sidebar ul li a.active, .sidebar ul li a:hover {
+            background-color: #0056b3;
+            color: white;
+        }
+
+        /* Overlay container styles */
+        /* Overlay styles */
+        .overlay {
+            position: absolute;
+            bottom: 10px;
+            width: 90%;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            /* background-color: rgba(0, 0, 0, 0.5); */
+        }
+
+        .overlay-box {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            margin: 0 10px;
+            min-width: 150px;
+        }
+
+        .overlay-box p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .overlay-box h3 {
+            margin: 5px 0 0;
+            font-size: 22px;
+        }
+    </style>
+
+</body>
+</html>

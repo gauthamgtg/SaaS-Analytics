@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, Response
+from flask import Flask, render_template, request, redirect, url_for, Response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import plotly.graph_objs as go
 import plotly.io as pio
@@ -411,6 +411,90 @@ def metrics():
     retention_rate = calculate_retention_rate()
 
     return render_template('metrics.html', arpu=round(arpu, 2), cltv_data=cltv_data, retention_rate=round(retention_rate, 2))
+
+from flask import render_template, request
+from sqlalchemy import func
+
+@app.route('/map')
+def view_map():
+    # Get the selected option from the URL query (default to 'customers')
+    data_type = request.args.get('data_type', 'customers')
+    
+    # Fetch data based on the selected option
+    data = get_map_data(data_type)
+    
+    # Calculate overall stats (for the overlay at the bottom of the map)
+    overall_stats = calculate_overall_stats()
+
+    # Render the map page with data
+    return render_template('map.html', data_type=data_type, data=data, overall_stats=overall_stats)
+
+def get_map_data(data_type):
+    """Fetch data grouped by country based on the selected option."""
+    
+    if data_type == 'customers':
+        # Number of customers per country
+        data = db.session.query(
+            Customer.country, func.count(Customer.id).label('customer_count')
+        ).group_by(Customer.country).all()
+
+        # Convert the result to a dictionary format { 'Country': value }
+        return {country: count for country, count in data}
+
+    elif data_type == 'active_customers':
+        # Number of active customers per country (based on subscription end date)
+        today = datetime.today().date()
+        data = db.session.query(
+            Customer.country, func.count(Customer.id).label('active_customer_count')
+        ).join(Subscription).filter(
+            Subscription.subscription_start <= today,
+            Subscription.subscription_end >= today
+        ).group_by(Customer.country).all()
+
+        return {country: count for country, count in data}
+
+    elif data_type == 'avg_revenue':
+        # Average revenue per customer per country
+        data = db.session.query(
+            Customer.country, func.avg(Subscription.subscription_amount).label('avg_revenue')
+        ).join(Subscription).group_by(Customer.country).all()
+
+        return {country: avg_revenue for country, avg_revenue in data}
+
+    elif data_type == 'total_revenue':
+        # Total customer revenue per country
+        data = db.session.query(
+            Customer.country, func.sum(Subscription.subscription_amount).label('total_revenue')
+        ).join(Subscription).group_by(Customer.country).all()
+
+        return {country: total_revenue for country, total_revenue in data}
+
+def calculate_overall_stats():
+    """Calculate overall stats for overlay at the bottom of the map."""
+    
+    # Total number of customers
+    total_customers = db.session.query(func.count(Customer.id)).scalar() or 0
+
+    # Total number of active customers
+    today = datetime.today().date()
+    active_customers = db.session.query(func.count(Customer.id)).join(Subscription).filter(
+        Subscription.subscription_start <= today,
+        Subscription.subscription_end >= today
+    ).scalar() or 0
+
+    # Average revenue per customer
+    avg_revenue = db.session.query(func.avg(Subscription.subscription_amount)).scalar() or 0
+
+    # Total revenue
+    total_revenue = db.session.query(func.sum(Subscription.subscription_amount)).scalar() or 0
+
+    # Return the stats in a dictionary format
+    return {
+        'total_customers': total_customers,
+        'active_customers': active_customers,
+        'avg_revenue': avg_revenue,
+        'total_revenue': total_revenue
+    }
 
 # Function to calculate CLTV
 def calculate_cltv():
