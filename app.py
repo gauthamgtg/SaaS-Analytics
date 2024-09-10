@@ -1,13 +1,15 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 import datetime
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for
 import plotly.express as px
 import csv
 from io import StringIO
 from flask import Response
-
+import plotly.graph_objs as go
+import plotly.io as pio
+from sqlalchemy import func
 
 app = Flask(__name__)
 
@@ -25,24 +27,30 @@ class Customer(db.Model):
     subscription_start = db.Column(db.Date, nullable=False)
     subscription_end = db.Column(db.Date, nullable=False)  # End date is now mandatory
     monthly_spend = db.Column(db.Float, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
 
     def __repr__(self):
         return f'<Customer {self.name}>'
+    
 
-# Basic route to display homepage
 @app.route('/')
 def home():
     customers = Customer.query.all()
-
-    # Get today's date
     today = datetime.today().date()
-
-    # Prepare a list of customers with their active status
     customer_data = []
-    for customer in customers:
-        # Check if today's date is before or on the subscription end date
-        is_active = today <= customer.subscription_end
+    
+        # Fetch all customers from the database
+    customers = Customer.query.all()
 
+    # Update is_active for each customer
+    for customer in customers:
+        customer.is_active = customer.subscription_start <= date.today() <= customer.subscription_end
+
+    # Commit the updates to the database
+    db.session.commit()
+
+    for customer in customers:
+        is_active = today <= customer.subscription_end
         customer_data.append({
             'id': customer.id,
             'name': customer.name,
@@ -52,7 +60,6 @@ def home():
             'is_active': is_active
         })
 
-    # Calculate active customers, churn rate, etc.
     active_customers = sum(1 for customer in customer_data if customer['is_active'])
     total_spend = sum(customer['monthly_spend'] for customer in customer_data)
     
@@ -75,6 +82,29 @@ def home():
                            total_spend=total_spend, 
                            churn_rate=churn_rate)
 
+@app.route('/charts')
+def charts():
+    customers = Customer.query.all()
+
+    today = datetime.today().date()
+    dates = []
+    active_counts = []
+
+    for i in range(30):
+        date = today - timedelta(days=i)
+        active_count = sum(1 for customer in customers if customer.subscription_start <= date <= customer.subscription_end)
+        dates.append(date)
+        active_counts.append(active_count)
+
+    # Create plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=dates, y=active_counts, mode='lines+markers', name='Active Customers'))
+    fig.update_layout(title='Active Customers Over Time', xaxis_title='Date', yaxis_title='Number of Active Customers')
+
+    # Convert plot to HTML
+    plot_html = pio.to_html(fig, full_html=False)
+
+    return render_template('charts.html', plot_html=plot_html)
 
 # Route to add a new customer
 @app.route('/add', methods=['GET', 'POST'])
@@ -207,6 +237,60 @@ def generate_monthly_spend_chart():
     monthly_spend_chart.update_layout(title='Total Monthly Spend', xaxis_title='Month', yaxis_title='Total Spend')
 
     return pio.to_html(monthly_spend_chart, full_html=False)
+
+# Add ARPU route
+@app.route('/metrics')
+def metrics():
+    total_revenue = db.session.query(func.sum(Customer.monthly_spend)).scalar() or 0
+    active_customers = db.session.query(Customer).filter(Customer.is_active == True).count()
+
+    arpu = total_revenue / active_customers if active_customers > 0 else 0
+    cltv_data = calculate_cltv()
+    retention_rate = calculate_retention_rate()
+
+    return render_template('metrics.html', arpu=round(arpu, 2), cltv_data=cltv_data, retention_rate=round(retention_rate, 2))
+
+# Function to calculate CLTV
+def calculate_cltv():
+    customers = Customer.query.all()
+    cltv_data = []
+    
+    for customer in customers:
+        # Sum of all monthly spend for the customer to get the total spend
+        cltv = db.session.query(func.sum(Customer.monthly_spend)).filter(Customer.id == customer.id).scalar() or 0
+        cltv_data.append({'name': customer.name, 'cltv': cltv})
+    
+    return cltv_data
+
+# Function to calculate retention rate
+def calculate_retention_rate():
+    churned_customers = Customer.query.filter(Customer.is_active == False).count()
+    total_customers = Customer.query.count()
+    return (total_customers - churned_customers) / total_customers * 100 if total_customers > 0 else 0
+
+# Filter by Date Range
+@app.route('/filter', methods=['POST'])
+def filter_customers():
+    start_date = request.form['start_date']
+    end_date = request.form['end_date']
+
+    customers = Customer.query.filter(Customer.subscription_start >= start_date, 
+                                      Customer.subscription_end <= end_date).all()
+    return render_template('index.html', customers=customers)
+
+# Filter by Active Status
+@app.route('/filter_status', methods=['POST'])
+def filter_status():
+    status_filter = request.form['status_filter']
+    
+    if status_filter == 'active':
+        customers = Customer.query.filter(Customer.is_active == True).all()
+    elif status_filter == 'churned':
+        customers = Customer.query.filter(Customer.is_active == False).all()
+    else:
+        customers = Customer.query.all()
+    
+    return render_template('index.html', customers=customers)
 
 if __name__ == '__main__':
     app.run(debug=True)

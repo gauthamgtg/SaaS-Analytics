@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrics</title>
+</head>
+<body>
+    <h1>Metrics Dashboard</h1>
+    <p><strong>ARPU:</strong> ${{ arpu }}</p>
+    <p><strong>Retention Rate:</strong> {{ retention_rate }}%</p>
+    
+    <h2>Customer Lifetime Value (CLTV)</h2>
+    <ul>
+        {% for customer in cltv_data %}
+            <li>{{ customer.name }}: ${{ customer.cltv }}</li>
+        {% endfor %}
+    </ul>
+
+    <a href="/">Go Back</a>
+</body>
+</html>

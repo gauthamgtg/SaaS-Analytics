@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Charts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Charts</h1>
+    <div id="chart">
+        {{ plot_html|safe }}
+    </div>
+    <a href="{{ url_for('home') }}">Back to Home</a>
+</body>
+</html>

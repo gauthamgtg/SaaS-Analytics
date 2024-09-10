@@ -1,74 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Customer Analytics</title>
+    <meta charset="UTF-8">
+    <title>Subscription Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Customer Analytics Dashboard</h1>
+    <h1>Subscription Analytics</h1>
+    <p>Active Customers: {{ active_customers }}</p>
+    <p>Total Monthly Spend: ${{ total_spend }}</p>
+    <p>Churn Rate: {{ churn_rate }}%</p>
+    <!-- Filter by Date Range -->
+<form method="POST" action="/filter">
+    Start Date: <input type="date" name="start_date" required>
+    End Date: <input type="date" name="end_date" required>
+    <input type="submit" value="Filter">
+</form>
+<div>
+    <a href="/metrics" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">View Metrics Dashboard</a>
+</div>
+<!-- Filter by Active Status -->
+<form method="POST" action="/filter_status">
+    <select name="status_filter">
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="churned">Churned</option>
+    </select>
+    <input type="submit" value="Filter">
+</form>
 
-    <!-- Display Metrics -->
-    <div>
-        <h3>Key Metrics</h3>
-        <p><strong>Churn Rate (Last 30 Days):</strong> {{ churn_rate }}%</p>
-        <p><strong>Total Active Customers:</strong> {{ active_customers }}</p>
-        <p><strong>Total Monthly Spend:</strong> ${{ total_spend }}</p>
-        <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    </div>
-
-    <!-- Customer List Table -->
-    <h2>Customer List</h2>
     <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Subscription Start</th>
-                <th>Subscription End</th>
-                <th>Monthly Spend</th>
-                <th>Active Status</th>  <!-- New column for active status -->
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for customer in customers %}
-                <tr>
-                    <td>{{ customer.name }}</td>
-                    <td>{{ customer.subscription_start }}</td>
-                    <td>{{ customer.subscription_end or 'Active' }}</td>
-                    <td>${{ customer.monthly_spend }}</td>
-                    <td>
-                        {% if customer.is_active %}
-                            <span style="color:green;">Active</span>
-                        {% else %}
-                            <span style="color:red;">Churned</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('edit_customer', id=customer.id) }}">Edit</a>
-                        <a href="{{ url_for('delete_customer', id=customer.id) }}">Delete</a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
+        <tr>
+            <th>Name</th>
+            <th>Subscription Start</th>
+            <th>Subscription End</th>
+            <th>Monthly Spend</th>
+            <th>Active Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for customer in customers %}
+        <tr>
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.subscription_start }}</td>
+            <td>{{ customer.subscription_end }}</td>
+            <td>${{ customer.monthly_spend }}</td>
+            <td>{{ 'Active' if customer.is_active else 'Churned' }}</td>
+            <td>
+                <a href="/edit/{{ customer.id }}">Edit</a>
+                <a href="/delete/{{ customer.id }}">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
     </table>
-
-    <!-- Add New Customer Button -->
     <a href="/add">Add New Customer</a>
-    <div>
-        <h2>Monthly Spend by Customer</h2>
-        {{ graph_html|safe }}
-    </div>
-</div>
-<div class="container mt-5">
-    <h1>Dashboard</h1>
-    <div>
-        <h2>Monthly Spend by Customer</h2>
-        {{ graph_html|safe }}
-    </div>
-</div>
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
-
+    <a href="/charts">View Charts</a>
 </body>
 </html>
