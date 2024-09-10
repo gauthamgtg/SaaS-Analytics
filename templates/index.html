@@ -32,6 +32,38 @@
             <div class="kpi-card"><h2>Churn Rate</h2><p>{{ churn_rate }}%</p></div>
         </div>
 
+        
+        <!-- Buttons to view customers and subscriptions list -->
+        <div class="view-lists">
+            <a href="/customers" class="btn-view">View Customers</a>
+            <a href="/subscriptions" class="btn-view">View Subscriptions</a>
+        </div>
+
+        <style>
+        /* Styling the buttons */
+        .btn-view {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            text-align: center;
+        }
+
+        .btn-view:hover {
+            background-color: #0056b3;
+        }
+
+        .view-lists {
+            text-align: center;
+            margin-top: 30px;
+        }
+        </style>
+
         <!-- Graphs Section -->
          <!-- Graphs Section -->
 <div class="graphs">
