@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Subscription List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Subscription List</h1>
+
+    <!-- Table to display subscriptions -->
+    <table>
+        <tr>
+            <th>Customer</th>
+            <th>Subscription Name</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for subscription in subscriptions %}
+        <tr>
+            <td>{{ subscription.customer.name }}</td>
+            <td>{{ subscription.name }}</td>
+            <td>{{ subscription.subscription_amount }}</td>
+            <td>{{ subscription.status }}</td>
+            <td>
+                <a href="/edit_subscription/{{ subscription.id }}" class="btn">Edit</a>
+                <a href="/delete_subscription/{{ subscription.id }}" class="btn">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- Button to add a new subscription -->
+    <a href="/add_subscription" class="btn">Add New Subscription</a>
+</body>
+</html>

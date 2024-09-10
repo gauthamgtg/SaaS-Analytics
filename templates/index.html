@@ -2,57 +2,183 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Subscription Analytics</title>
+    <title>SaaS Analytics Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js for graphs -->
 </head>
 <body>
-    <h1>Subscription Analytics</h1>
-    <p>Active Customers: {{ active_customers }}</p>
-    <p>Total Monthly Spend: ${{ total_spend }}</p>
-    <p>Churn Rate: {{ churn_rate }}%</p>
-    <!-- Filter by Date Range -->
-<form method="POST" action="/filter">
-    Start Date: <input type="date" name="start_date" required>
-    End Date: <input type="date" name="end_date" required>
-    <input type="submit" value="Filter">
-</form>
-<div>
-    <a href="/metrics" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">View Metrics Dashboard</a>
-</div>
-<!-- Filter by Active Status -->
-<form method="POST" action="/filter_status">
-    <select name="status_filter">
-        <option value="all">All</option>
-        <option value="active">Active</option>
-        <option value="churned">Churned</option>
-    </select>
-    <input type="submit" value="Filter">
-</form>
+    <div class="dashboard-container">
+        <h1>SaaS Analytics Dashboard</h1>
 
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Subscription Start</th>
-            <th>Subscription End</th>
-            <th>Monthly Spend</th>
-            <th>Active Status</th>
-            <th>Actions</th>
-        </tr>
-        {% for customer in customers %}
-        <tr>
-            <td>{{ customer.name }}</td>
-            <td>{{ customer.subscription_start }}</td>
-            <td>{{ customer.subscription_end }}</td>
-            <td>${{ customer.monthly_spend }}</td>
-            <td>{{ 'Active' if customer.is_active else 'Churned' }}</td>
-            <td>
-                <a href="/edit/{{ customer.id }}">Edit</a>
-                <a href="/delete/{{ customer.id }}">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-    <a href="/add">Add New Customer</a>
-    <a href="/charts">View Charts</a>
+        <!-- Dropdown to select time period grouping -->
+        <div class="grouping-dropdown">
+            <label for="grouping">Group By:</label>
+            <select id="grouping" name="grouping" onchange="updateGrouping()">
+                <option value="day" {% if period == 'day' %}selected{% endif %}>Day</option>
+                <option value="week" {% if period == 'week' %}selected{% endif %}>Week</option>
+                <option value="month" {% if period == 'month' %}selected{% endif %}>Month</option>
+                <option value="year" {% if period == 'year' %}selected{% endif %}>Year</option>
+            </select>
+        </div>
+
+        <!-- KPIs Section -->
+        <div class="kpis">
+            <!-- Display key metrics -->
+            <div class="kpi-card"><h2>Total Customers</h2><p>{{ total_customers }}</p></div>
+            <div class="kpi-card"><h2>Monthly Recurring Revenue (MRR)</h2><p>${{ mrr }}</p></div>
+            <div class="kpi-card"><h2>Annual Recurring Revenue (ARR)</h2><p>${{ arr }}</p></div>
+            <div class="kpi-card"><h2>Active Customers</h2><p>{{ active_customers }}</p></div>
+            <div class="kpi-card"><h2>Retention Rate</h2><p>{{ retention_rate }}%</p></div>
+            <div class="kpi-card"><h2>Churn Rate</h2><p>{{ churn_rate }}%</p></div>
+        </div>
+
+        <!-- Graphs Section -->
+         <!-- Graphs Section -->
+<div class="graphs">
+    <canvas id="customerGrowthChart"></canvas>
+    <canvas id="churnRateChart"></canvas>
+    <canvas id="revenueTrendChart"></canvas>
+    <canvas id="monthlyAmountChart"></canvas>
+</div>
+<p>{{ growth_labels }}</p>  <!-- This should print actual labels like ['January', 'February', 'March'] -->
+<p>{{ growth_data }}</p>    <!-- This should print actual data like [10, 20, 30] -->
+        <!-- Debugging Block: Print Data -->
+        <div>
+            <p>Growth Labels: {{ growth_labels }}</p>
+            <p>Growth Data: {{ growth_data }}</p>
+            <p>Churn Labels: {{ churn_labels }}</p>
+            <p>Churn Data: {{ churn_data }}</p>
+            <p>Revenue Labels: {{ revenue_labels }}</p>
+            <p>Revenue Data: {{ revenue_data }}</p>
+            <p>Monthly Labels: {{ monthly_labels }}</p>
+            <p>Monthly Data: {{ monthly_data }}</p>
+        </div>
+        <script>
+            const customerGrowthChart = new Chart(document.getElementById('customerGrowthChart'), {
+                type: 'line',
+                data: {
+                    labels: {{ growth_labels|safe }},
+                    datasets: [{
+                        label: 'Customer Growth (%)',
+                        data: {{ growth_data|safe }},
+                        backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        fill: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Customer Growth Over Time'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Period'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Growth (%)'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        
+            // Churn Rate Chart
+            const churnRateChart = new Chart(document.getElementById('churnRateChart'), {
+                type: 'line',
+                data: {
+                    labels: {{ churn_labels|safe }},
+                    datasets: [{
+                        label: 'Churn Rate',
+                        data: {{ churn_data|safe }},
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        fill: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Churn Rate Over Time'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Period'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Churn Rate (%)'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        
+            // Revenue Trend Chart
+            const revenueTrendChart = new Chart(document.getElementById('revenueTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: {{ revenue_labels|safe }},
+                    datasets: [{
+                        label: 'Revenue Trend',
+                        data: {{ revenue_data|safe }},
+                        backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Revenue Trend Over Time'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Period'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Total Revenue'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        </script>
+        
+    </div>
 </body>
 </html>

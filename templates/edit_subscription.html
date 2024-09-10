@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Subscription</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Edit Subscription</h2>
+        <form action="/edit_subscription/{{ subscription.id }}" method="POST">
+            <div class="form-group">
+                <label for="customer_id">Customer</label>
+                <select class="form-control" id="customer_id" name="customer_id" required>
+                    {% for customer in customers %}
+                        <option value="{{ customer.id }}" {% if customer.id == subscription.customer_id %}selected{% endif %}>{{ customer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="name">Subscription Name</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ subscription.name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="subscription_start">Subscription Start Date</label>
+                <input type="date" class="form-control" id="subscription_start" name="subscription_start" value="{{ subscription.subscription_start }}" required>
+            </div>
+            <div class="form-group">
+                <label for="subscription_end">Subscription End Date</label>
+                <input type="date" class="form-control" id="subscription_end" name="subscription_end" value="{{ subscription.subscription_end }}" required>
+            </div>
+            <div class="form-group">
+                <label for="subscription_amount">Subscription Amount</label>
+                <input type="number" class="form-control" id="subscription_amount" name="subscription_amount" value="{{ subscription.subscription_amount }}" required>
+            </div>
+            <div class="form-group">
+                <label for="subscription_plan_id">Subscription Plan ID</label>
+                <input type="number" class="form-control" id="subscription_plan_id" name="subscription_plan_id" value="{{ subscription.subscription_plan_id }}" required>
+            </div>
+            <div class="form-group">
+                <label for="status">Status</label>
+                <input type="text" class="form-control" id="status" name="status" value="{{ subscription.status }}">
+            </div>
+            <div class="form-group">
+                <label for="card_type">Card Type</label>
+                <input type="text" class="form-control" id="card_type" name="card_type" value="{{ subscription.card_type }}">
+            </div>
+            <div class="form-group">
+                <label for="currency">Currency</label>
+                <input type="text" class="form-control" id="currency" name="currency" value="{{ subscription.currency }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</body>
+</html>
