@@ -54,6 +54,10 @@
             <p>Monthly Data: {{ monthly_data }}</p>
         </div>
         <script>
+          function updateGrouping() {
+        const selectedGrouping = document.getElementById('grouping').value;
+        window.location.href = `/?period=${selectedGrouping}`;
+    }
             const customerGrowthChart = new Chart(document.getElementById('customerGrowthChart'), {
                 type: 'line',
                 data: {
