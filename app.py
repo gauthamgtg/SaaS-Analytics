@@ -77,6 +77,8 @@ def group_by_period(query, period):
         return func.date_trunc('week', query)
     elif period == 'month':
         return func.date_trunc('month', query)
+    elif period == 'quarter':
+        return func.date_trunc('quarter', query)
     elif period == 'year':
         return func.date_trunc('year', query)
     else:

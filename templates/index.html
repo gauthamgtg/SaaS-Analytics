@@ -10,16 +10,50 @@
     <div class="dashboard-container">
         <h1>SaaS Analytics Dashboard</h1>
 
-        <!-- Dropdown to select time period grouping -->
-        <div class="grouping-dropdown">
-            <label for="grouping">Group By:</label>
-            <select id="grouping" name="grouping" onchange="updateGrouping()">
-                <option value="day" {% if period == 'day' %}selected{% endif %}>Day</option>
-                <option value="week" {% if period == 'week' %}selected{% endif %}>Week</option>
-                <option value="month" {% if period == 'month' %}selected{% endif %}>Month</option>
-                <option value="year" {% if period == 'year' %}selected{% endif %}>Year</option>
-            </select>
+        <!-- Toggle Buttons to select time period grouping -->
+        <div class="toggle-buttons">
+            <button class="toggle-btn {% if period == 'day' %}active{% endif %}" onclick="updateGrouping('day')">Day</button>
+            <button class="toggle-btn {% if period == 'week' %}active{% endif %}" onclick="updateGrouping('week')">Week</button>
+            <button class="toggle-btn {% if period == 'month' %}active{% endif %}" onclick="updateGrouping('month')">Month</button>
+            <button class="toggle-btn {% if period == 'quarter' %}active{% endif %}" onclick="updateGrouping('quarter')">Quarter</button>
+            <button class="toggle-btn {% if period == 'year' %}active{% endif %}" onclick="updateGrouping('year')">Year</button>
         </div>
+
+        <style>
+            .toggle-buttons {
+                display: flex;
+                justify-content: center;
+                margin: 20px 0;
+            }
+
+            .toggle-btn {
+                padding: 12px 24px;
+                background-color: #f0f4f8;
+                color: #1f2937;
+                border: none;
+                border-radius: 5px;
+                margin: 0 5px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            }
+
+            .toggle-btn.active {
+                background-color: #007bff;
+                color: white;
+            }
+
+            .toggle-btn:hover {
+                background-color: #e2e8f0;
+            }
+        </style>
+
+        <script>
+            function updateGrouping(period) {
+                window.location.href = `/?period=${period}`;
+            }
+        </script>
 
         <!-- KPIs Section -->
         <div class="kpis">
@@ -32,7 +66,6 @@
             <div class="kpi-card"><h2>Churn Rate</h2><p>{{ churn_rate }}%</p></div>
         </div>
 
-        
         <!-- Buttons to view customers and subscriptions list -->
         <div class="view-lists">
             <a href="/customers" class="btn-view">View Customers</a>
@@ -65,15 +98,13 @@
         </style>
 
         <!-- Graphs Section -->
-         <!-- Graphs Section -->
-<div class="graphs">
-    <canvas id="customerGrowthChart"></canvas>
-    <canvas id="churnRateChart"></canvas>
-    <canvas id="revenueTrendChart"></canvas>
-    <canvas id="monthlyAmountChart"></canvas>
-</div>
-<p>{{ growth_labels }}</p>  <!-- This should print actual labels like ['January', 'February', 'March'] -->
-<p>{{ growth_data }}</p>    <!-- This should print actual data like [10, 20, 30] -->
+        <div class="graphs">
+            <canvas id="customerGrowthChart"></canvas>
+            <canvas id="churnRateChart"></canvas>
+            <canvas id="revenueTrendChart"></canvas>
+            <canvas id="monthlyAmountChart"></canvas>
+        </div>
+
         <!-- Debugging Block: Print Data -->
         <div>
             <p>Growth Labels: {{ growth_labels }}</p>
@@ -85,11 +116,8 @@
             <p>Monthly Labels: {{ monthly_labels }}</p>
             <p>Monthly Data: {{ monthly_data }}</p>
         </div>
+
         <script>
-          function updateGrouping() {
-        const selectedGrouping = document.getElementById('grouping').value;
-        window.location.href = `/?period=${selectedGrouping}`;
-    }
             const customerGrowthChart = new Chart(document.getElementById('customerGrowthChart'), {
                 type: 'line',
                 data: {
@@ -130,7 +158,7 @@
                     }
                 }
             });
-        
+
             // Churn Rate Chart
             const churnRateChart = new Chart(document.getElementById('churnRateChart'), {
                 type: 'line',
@@ -172,7 +200,7 @@
                     }
                 }
             });
-        
+
             // Revenue Trend Chart
             const revenueTrendChart = new Chart(document.getElementById('revenueTrendChart'), {
                 type: 'line',
