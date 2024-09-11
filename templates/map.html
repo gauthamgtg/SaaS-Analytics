@@ -9,34 +9,29 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
     <style>
-        /* Map container */
+        /* Map container takes the full viewport */
         #map-container {
             position: absolute;
             width: 100vw;
             height: 100vh;
             top: 0;
             left: 0;
-            overflow: hidden;
         }
 
-        /* Map takes the entire screen */
         #map {
             width: 100vw;
             height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
         }
 
-        /* Sidebar overlay on top of the map */
+        /* Sidebar for data type selection */
         .sidebar {
             position: absolute;
             top: 20px;
             left: 20px;
-            background-color: rgba(255, 255, 255, 0.85);
+            background-color: rgba(255, 255, 255, 0.9);
             padding: 20px;
             box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.1);
-            width: 250px;
+            width: 200px;
             z-index: 1000;
             border-radius: 10px;
         }
@@ -64,40 +59,53 @@
             color: white;
         }
 
-        /* Top-right metrics box */
-        .metrics-box {
+        /* Bottom overlay for overall stats */
+        .overlay {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            z-index: 1000;
+        }
+
+        .overlay-box {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            margin: 0 10px;
+            min-width: 150px;
+        }
+
+        /* Info box for hover */
+        .info {
             position: absolute;
             top: 20px;
             right: 20px;
-            background-color: rgba(255, 255, 255, 0.85);
-            padding: 10px 15px;
-            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
-            font-size: 14px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
-            border-radius: 10px;
         }
 
-        .metrics-box h4 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .metrics-box p {
-            margin: 0;
-            font-size: 14px;
-        }
-
-        /* Color scale legend */
+        /* Legend styling */
         .legend {
             position: absolute;
             bottom: 30px;
-            right: 20px;
-            background-color: rgba(255, 255, 255, 0.85);
+            right: 30px;
+            background: white;
             padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
             line-height: 18px;
             color: #555;
-            z-index: 1000;
         }
 
         .legend i {
@@ -115,7 +123,7 @@
     <div id="map-container">
         <div id="map"></div>
 
-        <!-- Sidebar Overlay on Top of Map -->
+        <!-- Sidebar for options -->
         <div class="sidebar">
             <h2>Map Options</h2>
             <ul>
@@ -126,40 +134,60 @@
             </ul>
         </div>
 
-        <!-- Metrics Box on the top right -->
-        <div class="metrics-box">
-            <h4>{{ data_type.replace('_', ' ').capitalize() }} by Country</h4>
-            <p>Hover over the map for details</p>
+        <!-- Bottom Overlay for Overall Stats -->
+        <div class="overlay">
+            <div class="overlay-box">
+                <p>Total Customers</p>
+                <h3>{{ overall_stats.total_customers }}</h3>
+            </div>
+            <div class="overlay-box">
+                <p>Active Customers</p>
+                <h3>{{ overall_stats.active_customers }}</h3>
+            </div>
+            <div class="overlay-box">
+                <p>Avg Revenue per Customer</p>
+                <h3>${{ overall_stats.avg_revenue | round(2) }}</h3>
+            </div>
+            <div class="overlay-box">
+                <p>Total Revenue</p>
+                <h3>${{ overall_stats.total_revenue }}</h3>
+            </div>
         </div>
 
-        <!-- Legend for Color Scale -->
-        <div class="legend">
-            <i style="background: #800026"></i> > 100 <br>
-            <i style="background: #BD0026"></i> 50 - 100 <br>
-            <i style="background: #E31A1C"></i> 20 - 50 <br>
-            <i style="background: #FC4E2A"></i> 10 - 20 <br>
-            <i style="background: #FD8D3C"></i> 5 - 10 <br>
-            <i style="background: #FEB24C"></i> 1 - 5 <br>
-            <i style="background: #FFEDA0"></i> 0 <br>
+        <!-- Top-right hover info box -->
+        <div class="info" id="info-box">
+            <h4>Hover over a country</h4>
+            <p id="info-text">Select a country to see more details</p>
+        </div>
+
+        <!-- Legend for color scale -->
+        <div class="legend" id="legend">
+            <i style="background: #800026"></i> > 100<br>
+            <i style="background: #BD0026"></i> 50 - 100<br>
+            <i style="background: #E31A1C"></i> 20 - 50<br>
+            <i style="background: #FC4E2A"></i> 10 - 20<br>
+            <i style="background: #FD8D3C"></i> 5 - 10<br>
+            <i style="background: #FEB24C"></i> 1 - 5<br>
+            <i style="background: #FFEDA0"></i> 0 - 1<br>
         </div>
     </div>
 
     <!-- Leaflet.js JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    
+
     <script>
         // Map initialization
         var map = L.map('map').setView([20, 0], 2); // Centered at [lat, lng] and zoom level 2
-    
+
         // Load OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-    
+
         // Dynamically passed country data from Flask
-        var countryData = {{ country_data | tojson or '{}' }};
-    
+        var countryData = {{ country_data | tojson | safe }}; // Ensure proper JSON formatting and ensure safe JSON parsing in JavaScript
+
         // Example GeoJSON data for countries (real-world GeoJSON polygons should be added)
         var geojsonData = {"type":"FeatureCollection","features":[
 {"type":"Feature","id":"AFG","properties":{"name":"Afghanistan"},"value": countryData["Afghanistan"] || 0 ,"geometry":{"type":"Polygon","coordinates":[[[61.210817,35.650072],[62.230651,35.270664],[62.984662,35.404041],[63.193538,35.857166],[63.982896,36.007957],[64.546479,36.312073],[64.746105,37.111818],[65.588948,37.305217],[65.745631,37.661164],[66.217385,37.39379],[66.518607,37.362784],[67.075782,37.356144],[67.83,37.144994],[68.135562,37.023115],[68.859446,37.344336],[69.196273,37.151144],[69.518785,37.608997],[70.116578,37.588223],[70.270574,37.735165],[70.376304,38.138396],[70.806821,38.486282],[71.348131,38.258905],[71.239404,37.953265],[71.541918,37.905774],[71.448693,37.065645],[71.844638,36.738171],[72.193041,36.948288],[72.63689,37.047558],[73.260056,37.495257],[73.948696,37.421566],[74.980002,37.41999],[75.158028,37.133031],[74.575893,37.020841],[74.067552,36.836176],[72.920025,36.720007],[71.846292,36.509942],[71.262348,36.074388],[71.498768,35.650563],[71.613076,35.153203],[71.115019,34.733126],[71.156773,34.348911],[70.881803,33.988856],[69.930543,34.02012],[70.323594,33.358533],[69.687147,33.105499],[69.262522,32.501944],[69.317764,31.901412],[68.926677,31.620189],[68.556932,31.71331],[67.792689,31.58293],[67.683394,31.303154],[66.938891,31.304911],[66.381458,30.738899],[66.346473,29.887943],[65.046862,29.472181],[64.350419,29.560031],[64.148002,29.340819],[63.550261,29.468331],[62.549857,29.318572],[60.874248,29.829239],[61.781222,30.73585],[61.699314,31.379506],[60.941945,31.548075],[60.863655,32.18292],[60.536078,32.981269],[60.9637,33.528832],[60.52843,33.676446],[60.803193,34.404102],[61.210817,35.650072]]]}},
@@ -344,7 +372,7 @@
 {"type":"Feature","id":"ZWE","properties":{"name":"Zimbabwe"},"value": countryData["Zimbabwe"] || 0 ,"geometry":{"type":"Polygon","coordinates":[[[31.191409,-22.25151],[30.659865,-22.151567],[30.322883,-22.271612],[29.839037,-22.102216],[29.432188,-22.091313],[28.794656,-21.639454],[28.02137,-21.485975],[27.727228,-20.851802],[27.724747,-20.499059],[27.296505,-20.39152],[26.164791,-19.293086],[25.850391,-18.714413],[25.649163,-18.536026],[25.264226,-17.73654],[26.381935,-17.846042],[26.706773,-17.961229],[27.044427,-17.938026],[27.598243,-17.290831],[28.467906,-16.4684],[28.825869,-16.389749],[28.947463,-16.043051],[29.516834,-15.644678],[30.274256,-15.507787],[30.338955,-15.880839],[31.173064,-15.860944],[31.636498,-16.07199],[31.852041,-16.319417],[32.328239,-16.392074],[32.847639,-16.713398],[32.849861,-17.979057],[32.654886,-18.67209],[32.611994,-19.419383],[32.772708,-19.715592],[32.659743,-20.30429],[32.508693,-20.395292],[32.244988,-21.116489],[31.191409,-22.25151]]]}}
 ]}
 ;
-    
+
         // Function to map country names in `countryData` to GeoJSON
         geojsonData.features.forEach(function(feature) {
             var countryName = feature.properties.name;
@@ -354,7 +382,7 @@
                 feature.properties.value = 0; // Default to 0 if no data
             }
         });
-    
+
         // Color scale for the data
         function getColor(value) {
             return value > 100 ? '#800026' :
@@ -365,7 +393,7 @@
                    value > 0   ? '#FEB24C' :
                                  '#FFEDA0';
         }
-    
+
         // Style function for each country
         function style(feature) {
             return {
@@ -377,50 +405,50 @@
                 fillOpacity: 0.7
             };
         }
-    
+
         // Highlight feature on hover
         function highlightFeature(e) {
             var layer = e.target;
-    
             layer.setStyle({
                 weight: 5,
                 color: '#666',
                 dashArray: '',
                 fillOpacity: 0.7
             });
-    
-            // Update the info box (if any)
+
+            var props = layer.feature.properties;
+            var countryName = props.name;
+            var value = props.value;
+
+            // Update the top-right hover info box
+            document.getElementById("info-text").innerText = `${countryName}: ${value} customers`;
         }
-    
-        // Reset highlight when hovering out
+
         function resetHighlight(e) {
             geojson.resetStyle(e.target);
-            // Reset info box
+            document.getElementById("info-text").innerText = "Select a country to see more details";
         }
-    
-        // Zoom to the feature when clicked
+
         function zoomToFeature(e) {
             map.fitBounds(e.target.getBounds());
         }
-    
-        // Bind events for hover and click to each feature
+
         function onEachFeature(feature, layer) {
             layer.on({
                 mouseover: highlightFeature,
                 mouseout: resetHighlight,
                 click: zoomToFeature
             });
-    
+
             // Bind a popup for country info
             layer.bindPopup(feature.properties.name + ": " + feature.properties.value + " customers");
         }
-    
-        // Add the geojson data to the map
+
         var geojson = L.geoJson(geojsonData, {
             style: style,
             onEachFeature: onEachFeature
         }).addTo(map);
     </script>
-    
+
 </body>
 </html>
