@@ -416,18 +416,36 @@ from flask import render_template, request
 from sqlalchemy import func
 
 @app.route('/map')
-def view_map():
-    # Get the selected option from the URL query (default to 'customers')
+def map_view():
     data_type = request.args.get('data_type', 'customers')
-    
-    # Fetch data based on the selected option
-    data = get_map_data(data_type)
-    
-    # Calculate overall stats (for the overlay at the bottom of the map)
-    overall_stats = calculate_overall_stats()
 
-    # Render the map page with data
-    return render_template('map.html', data_type=data_type, data=data, overall_stats=overall_stats)
+    # Fetch data based on data type
+    if data_type == 'customers':
+        data = db.session.query(Customer.country, func.count(Customer.id).label('count')).group_by(Customer.country).all()
+    elif data_type == 'active_customers':
+        data = db.session.query(Customer.country, func.count(Subscription.id).label('count')).join(Subscription).filter(
+            Subscription.subscription_start <= datetime.today(),
+            Subscription.subscription_end >= datetime.today()
+        ).group_by(Customer.country).all()
+    elif data_type == 'avg_revenue':
+        data = db.session.query(Customer.country, func.avg(Subscription.subscription_amount).label('avg_revenue')).join(
+            Subscription).group_by(Customer.country).all()
+    elif data_type == 'total_revenue':
+        data = db.session.query(Customer.country, func.sum(Subscription.subscription_amount).label('total_revenue')).join(
+            Subscription).group_by(Customer.country).all()
+
+    # Ensure data is not None
+    if not data:
+        data = []
+
+    # Debug log to print the data
+    print("Country data: ", data)
+
+    # Convert data to dictionary format suitable for frontend
+    country_data = {country: value for country, value in data}
+
+    # Render the template and pass the data
+    return render_template('map.html', country_data=country_data, data_type=data_type, overall_stats=calculate_overall_stats())
 
 def get_map_data(data_type):
     """Fetch data grouped by country based on the selected option."""
