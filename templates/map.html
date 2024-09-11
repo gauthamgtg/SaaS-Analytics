@@ -102,7 +102,7 @@
         /* Legend styling */
         .legend {
             position: absolute;
-            bottom: 60px; /* Adjusted height */
+            bottom: 120px; /* Adjusted height */
             right: 30px;
             background: rgba(255, 255, 255, 0.85);
             padding: 10px;
@@ -192,7 +192,6 @@
             <i style="background: #E31A1C"></i><span id="legend-mid-high"></span><br>
             <i style="background: #FC4E2A"></i><span id="legend-mid"></span><br>
             <i style="background: #FD8D3C"></i><span id="legend-mid-low"></span><br>
-            <i style="background: #FEB24C"></i><span id="legend-low"></span><br>
             <i style="background: #FFEDA0"></i><span id="legend-min">0 - 1</span><br>
         </div>
     </div>
@@ -409,21 +408,23 @@
             }
         });
 
-        // Determine dynamic legend values based on min and max, ignoring zero
+        // Determine dynamic legend values based on min and max, ignoring zero, with 6 bins
         function calculateLegendRanges() {
             var values = geojsonData.features.map(function(f) { return f.properties.value; });
             var filteredValues = values.filter(v => v > 0);  // Exclude zero values
             var min = Math.min.apply(null, filteredValues);
             var max = Math.max.apply(null, filteredValues);
 
-            // Calculate ranges dynamically
+            // Calculate ranges dynamically for 6 bins
             var range = max - min;
+            var binSize = range / 6;  // 6 bins
+
             return {
                 max: max,
-                high: min + range * 0.75,
-                midHigh: min + range * 0.50,
-                mid: min + range * 0.25,
-                low: min + range * 0.10,
+                high: max - binSize,
+                midHigh: max - (2 * binSize),
+                mid: max - (3 * binSize),
+                low: max - (4 * binSize),
                 min: min
             };
         }
@@ -436,7 +437,7 @@
             document.getElementById('legend-high').innerText = Math.round(ranges.high) + " - " + Math.round(ranges.midHigh);
             document.getElementById('legend-mid-high').innerText = Math.round(ranges.midHigh) + " - " + Math.round(ranges.mid);
             document.getElementById('legend-mid').innerText = Math.round(ranges.mid) + " - " + Math.round(ranges.low);
-            document.getElementById('legend-low').innerText = Math.round(ranges.low) + " - " + Math.round(ranges.min);
+            document.getElementById('legend-mid-low').innerText = Math.round(ranges.low) + " - " + Math.round(ranges.min);
             document.getElementById('legend-min').innerText = Math.round(ranges.min);
         }
 
@@ -489,10 +490,6 @@
             geojson.resetStyle(e.target);
             document.getElementById("info-title").innerText = "{{ data_type.replace('_', ' ').title() }}";
             document.getElementById("info-text").innerText = "Hover over a country";
-        }
-
-        function zoomToFeature(e) {
-            map.fitBounds(e.target.getBounds());
         }
 
         function onEachFeature(feature, layer) {
