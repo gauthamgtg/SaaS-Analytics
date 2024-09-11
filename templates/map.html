@@ -28,10 +28,10 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.85);
             padding: 20px;
-            box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.1);
-            width: 200px;
+            box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.2);
+            width: 250px;
             z-index: 1000;
             border-radius: 10px;
         }
@@ -70,10 +70,13 @@
             justify-content: space-around;
             padding: 10px;
             z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
         }
 
         .overlay-box {
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.4);
             color: white;
             padding: 10px;
             border-radius: 8px;
@@ -81,6 +84,7 @@
             flex: 1;
             margin: 0 10px;
             min-width: 150px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         /* Info box for hover */
@@ -88,10 +92,10 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background-color: white;
-            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
         }
 
@@ -100,10 +104,10 @@
             position: absolute;
             bottom: 30px;
             right: 30px;
-            background: white;
+            background: rgba(255, 255, 255, 0.85);
             padding: 10px;
             border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             line-height: 18px;
             color: #555;
         }
@@ -114,6 +118,26 @@
             float: left;
             margin-right: 8px;
             opacity: 0.7;
+        }
+
+        /* Text formatting for better readability */
+        h4, h3, p {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        h4 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        h3 {
+            font-size: 22px;
+            color: #fff;
+        }
+
+        p {
+            font-size: 16px;
         }
     </style>
 </head>
@@ -156,7 +180,7 @@
 
         <!-- Top-right hover info box -->
         <div class="info" id="info-box">
-            <h4>Hover over a country</h4>
+            <h4 id="info-title">Hover over a country</h4>
             <p id="info-text">Select a country to see more details</p>
         </div>
 
@@ -187,6 +211,7 @@
 
         // Dynamically passed country data from Flask
         var countryData = {{ country_data | tojson | safe }}; // Ensure proper JSON formatting and ensure safe JSON parsing in JavaScript
+        var selectedDataType = "{{ data_type | default('customers', true) }}"; // Capture the selected data type
 
         // Example GeoJSON data for countries (real-world GeoJSON polygons should be added)
         var geojsonData = {"type":"FeatureCollection","features":[
@@ -377,7 +402,7 @@
         geojsonData.features.forEach(function(feature) {
             var countryName = feature.properties.name;
             if (countryData[countryName]) {
-                feature.properties.value = countryData[countryName];
+                feature.properties.value = Math.round(countryData[countryName]); // Round off numbers
             } else {
                 feature.properties.value = 0; // Default to 0 if no data
             }
@@ -390,7 +415,7 @@
                    value > 20  ? '#E31A1C' :
                    value > 10  ? '#FC4E2A' :
                    value > 5   ? '#FD8D3C' :
-                   value > 0   ? '#FEB24C' :
+                   value > 1   ? '#FEB24C' :
                                  '#FFEDA0';
         }
 
@@ -421,11 +446,13 @@
             var value = props.value;
 
             // Update the top-right hover info box
-            document.getElementById("info-text").innerText = `${countryName}: ${value} customers`;
+            document.getElementById("info-title").innerText = selectedDataType.replace('_', ' ').toUpperCase();
+            document.getElementById("info-text").innerText = `${countryName}: ${value} ${selectedDataType.replace('_', ' ')}`;
         }
 
         function resetHighlight(e) {
             geojson.resetStyle(e.target);
+            document.getElementById("info-title").innerText = "Hover over a country";
             document.getElementById("info-text").innerText = "Select a country to see more details";
         }
 
@@ -441,7 +468,7 @@
             });
 
             // Bind a popup for country info
-            layer.bindPopup(feature.properties.name + ": " + feature.properties.value + " customers");
+            layer.bindPopup(feature.properties.name + ": " + feature.properties.value + " " + selectedDataType.replace('_', ' '));
         }
 
         var geojson = L.geoJson(geojsonData, {
