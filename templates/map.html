@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
     <style>
-        /* Same styling as before */
+        /* Map container */
         #map-container {
             position: absolute;
             width: 100vw;
@@ -19,6 +19,7 @@
             overflow: hidden;
         }
 
+        /* Map takes the entire screen */
         #map {
             width: 100vw;
             height: 100vh;
@@ -27,11 +28,12 @@
             left: 0;
         }
 
+        /* Sidebar overlay on top of the map */
         .sidebar {
             position: absolute;
             top: 20px;
             left: 20px;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.85);
             padding: 20px;
             box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.1);
             width: 250px;
@@ -39,39 +41,71 @@
             border-radius: 10px;
         }
 
-        .overlay {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            display: flex;
-            justify-content: space-around;
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul li a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 16px;
             padding: 10px;
+            display: block;
+            border-radius: 5px;
+        }
+
+        .sidebar ul li a.active, .sidebar ul li a:hover {
+            background-color: #0056b3;
+            color: white;
+        }
+
+        /* Top-right metrics box */
+        .metrics-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 10px 15px;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            z-index: 1000;
+            border-radius: 10px;
+        }
+
+        .metrics-box h4 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .metrics-box p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* Color scale legend */
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 10px;
+            line-height: 18px;
+            color: #555;
             z-index: 1000;
         }
 
-        .overlay-box {
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            flex: 1;
-            margin: 0 10px;
-            min-width: 150px;
-        }
-
-        @media (max-width: 768px) {
-            .overlay {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .overlay-box {
-                width: 80%;
-                margin-bottom: 10px;
-            }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -92,24 +126,21 @@
             </ul>
         </div>
 
-        <!-- Bottom Overlay for Overall Stats -->
-        <div class="overlay">
-            <div class="overlay-box">
-                <p>Total Customers</p>
-                <h3>{{ overall_stats.total_customers }}</h3>
-            </div>
-            <div class="overlay-box">
-                <p>Active Customers</p>
-                <h3>{{ overall_stats.active_customers }}</h3>
-            </div>
-            <div class="overlay-box">
-                <p>Avg Revenue per Customer</p>
-                <h3>${{ overall_stats.avg_revenue | round(2) }}</h3>
-            </div>
-            <div class="overlay-box">
-                <p>Total Revenue</p>
-                <h3>${{ overall_stats.total_revenue }}</h3>
-            </div>
+        <!-- Metrics Box on the top right -->
+        <div class="metrics-box">
+            <h4>{{ data_type.replace('_', ' ').capitalize() }} by Country</h4>
+            <p>Hover over the map for details</p>
+        </div>
+
+        <!-- Legend for Color Scale -->
+        <div class="legend">
+            <i style="background: #800026"></i> > 100 <br>
+            <i style="background: #BD0026"></i> 50 - 100 <br>
+            <i style="background: #E31A1C"></i> 20 - 50 <br>
+            <i style="background: #FC4E2A"></i> 10 - 20 <br>
+            <i style="background: #FD8D3C"></i> 5 - 10 <br>
+            <i style="background: #FEB24C"></i> 1 - 5 <br>
+            <i style="background: #FFEDA0"></i> 0 <br>
         </div>
     </div>
 
@@ -128,7 +159,6 @@
     
         // Dynamically passed country data from Flask
         var countryData = {{ country_data | tojson or '{}' }};
-        console.log("Country Data: ", countryData);  // Check the structure of the data
     
         // Example GeoJSON data for countries (real-world GeoJSON polygons should be added)
         var geojsonData = {"type":"FeatureCollection","features":[
@@ -324,9 +354,6 @@
                 feature.properties.value = 0; // Default to 0 if no data
             }
         });
-    
-        // Check if GeoJSON data includes values properly
-        console.log("GeoJSON Data: ", geojsonData);
     
         // Color scale for the data
         function getColor(value) {
