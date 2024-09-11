@@ -70,8 +70,8 @@
             justify-content: space-around;
             padding: 10px;
             z-index: 1000;
-            /* background-color: rgba(255, 255, 255, 0.9); */
-            /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); */
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             border-radius: 10px;
         }
 
@@ -102,7 +102,7 @@
         /* Legend styling */
         .legend {
             position: absolute;
-            bottom: 120px; /* Adjusted height */
+            bottom: 60px; /* Adjusted height */
             right: 30px;
             background: rgba(255, 255, 255, 0.85);
             padding: 10px;
@@ -187,13 +187,13 @@
 
         <!-- Legend for color scale -->
         <div class="legend" id="legend">
-            <i style="background: #800026"></i> > 100<br>
-            <i style="background: #BD0026"></i> 50 - 100<br>
-            <i style="background: #E31A1C"></i> 20 - 50<br>
-            <i style="background: #FC4E2A"></i> 10 - 20<br>
-            <i style="background: #FD8D3C"></i> 5 - 10<br>
-            <i style="background: #FEB24C"></i> 1 - 5<br>
-            <i style="background: #FFEDA0"></i> 0 - 1<br>
+            <i style="background: #800026"></i><span id="legend-max">> 100</span><br>
+            <i style="background: #BD0026"></i><span id="legend-high"></span><br>
+            <i style="background: #E31A1C"></i><span id="legend-mid-high"></span><br>
+            <i style="background: #FC4E2A"></i><span id="legend-mid"></span><br>
+            <i style="background: #FD8D3C"></i><span id="legend-mid-low"></span><br>
+            <i style="background: #FEB24C"></i><span id="legend-low"></span><br>
+            <i style="background: #FFEDA0"></i><span id="legend-min">0 - 1</span><br>
         </div>
     </div>
 
@@ -409,15 +409,49 @@
             }
         });
 
+        // Determine dynamic legend values based on min and max, ignoring zero
+        function calculateLegendRanges() {
+            var values = geojsonData.features.map(function(f) { return f.properties.value; });
+            var filteredValues = values.filter(v => v > 0);  // Exclude zero values
+            var min = Math.min.apply(null, filteredValues);
+            var max = Math.max.apply(null, filteredValues);
+
+            // Calculate ranges dynamically
+            var range = max - min;
+            return {
+                max: max,
+                high: min + range * 0.75,
+                midHigh: min + range * 0.50,
+                mid: min + range * 0.25,
+                low: min + range * 0.10,
+                min: min
+            };
+        }
+
+        // Update the legend with dynamic values
+        function updateLegend() {
+            var ranges = calculateLegendRanges();
+
+            document.getElementById('legend-max').innerText = "> " + Math.round(ranges.high);
+            document.getElementById('legend-high').innerText = Math.round(ranges.high) + " - " + Math.round(ranges.midHigh);
+            document.getElementById('legend-mid-high').innerText = Math.round(ranges.midHigh) + " - " + Math.round(ranges.mid);
+            document.getElementById('legend-mid').innerText = Math.round(ranges.mid) + " - " + Math.round(ranges.low);
+            document.getElementById('legend-low').innerText = Math.round(ranges.low) + " - " + Math.round(ranges.min);
+            document.getElementById('legend-min').innerText = Math.round(ranges.min);
+        }
+
+        // Call the updateLegend function initially
+        updateLegend();
+
         // Color scale for the data
         function getColor(value) {
-            return value > 100 ? '#800026' :
-                   value > 50  ? '#BD0026' :
-                   value > 20  ? '#E31A1C' :
-                   value > 10  ? '#FC4E2A' :
-                   value > 5   ? '#FD8D3C' :
-                   value > 1   ? '#FEB24C' :
-                                 '#FFEDA0';
+            var ranges = calculateLegendRanges();
+            return value > ranges.high ? '#800026' :
+                   value > ranges.midHigh  ? '#BD0026' :
+                   value > ranges.mid  ? '#E31A1C' :
+                   value > ranges.low  ? '#FC4E2A' :
+                   value > ranges.min   ? '#FD8D3C' :
+                                          '#FFEDA0';
         }
 
         // Style function for each country
