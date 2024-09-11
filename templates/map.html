@@ -70,8 +70,8 @@
             justify-content: space-around;
             padding: 10px;
             z-index: 1000;
-            background-color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            /* background-color: rgba(255, 255, 255, 0.9); */
+            /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); */
             border-radius: 10px;
         }
 
@@ -102,7 +102,7 @@
         /* Legend styling */
         .legend {
             position: absolute;
-            bottom: 30px;
+            bottom: 120px; /* Adjusted height */
             right: 30px;
             background: rgba(255, 255, 255, 0.85);
             padding: 10px;
@@ -110,6 +110,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             line-height: 18px;
             color: #555;
+            z-index: 1000;
         }
 
         .legend i {
@@ -170,7 +171,7 @@
             </div>
             <div class="overlay-box">
                 <p>Avg Revenue per Customer</p>
-                <h3>${{ overall_stats.avg_revenue | round(2) }}</h3>
+                <h3>${{ overall_stats.avg_revenue | round(0) }}</h3> <!-- Rounded off to integer -->
             </div>
             <div class="overlay-box">
                 <p>Total Revenue</p>
@@ -180,8 +181,8 @@
 
         <!-- Top-right hover info box -->
         <div class="info" id="info-box">
-            <h4 id="info-title">Hover over a country</h4>
-            <p id="info-text">Select a country to see more details</p>
+            <h4 id="info-title">{{ data_type.replace('_', ' ').title() }}</h4> <!-- Show selected map option -->
+            <p id="info-text">Hover over a country</p>
         </div>
 
         <!-- Legend for color scale -->
@@ -452,8 +453,8 @@
 
         function resetHighlight(e) {
             geojson.resetStyle(e.target);
-            document.getElementById("info-title").innerText = "Hover over a country";
-            document.getElementById("info-text").innerText = "Select a country to see more details";
+            document.getElementById("info-title").innerText = "{{ data_type.replace('_', ' ').title() }}";
+            document.getElementById("info-text").innerText = "Hover over a country";
         }
 
         function zoomToFeature(e) {
@@ -463,12 +464,14 @@
         function onEachFeature(feature, layer) {
             layer.on({
                 mouseover: highlightFeature,
-                mouseout: resetHighlight,
-                click: zoomToFeature
+                mouseout: resetHighlight
             });
 
             // Bind a popup for country info
-            layer.bindPopup(feature.properties.name + ": " + feature.properties.value + " " + selectedDataType.replace('_', ' '));
+            layer.bindPopup(`
+                ${feature.properties.name}<br>
+                Total Customers: ${feature.properties.value} ${selectedDataType.replace('_', ' ')}
+            `);
         }
 
         var geojson = L.geoJson(geojsonData, {
