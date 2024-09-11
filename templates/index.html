@@ -5,11 +5,32 @@
     <title>SaaS Analytics Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js for graphs -->
+    <style>
+        /* Additional styling for the logout button */
+        .logout-btn {
+            position: absolute;
+            top: 80px;
+            right: 290px;
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
         <h1>SaaS Analytics Dashboard</h1>
-
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
         <!-- Toggle Buttons to select time period grouping -->
         <div class="toggle-buttons">
             <button class="toggle-btn {% if period == 'day' %}active{% endif %}" onclick="updateGrouping('day')">Day</button>

@@ -7,8 +7,14 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 import csv
 from io import StringIO
+from flask import Flask, render_template, redirect, url_for, session, request, flash
+# from models import db, Business  # Assuming your Business model is defined here
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 app = Flask(__name__)
+app.secret_key = '12345'  # Use a strong secret key for session management
+
 
 # PostgreSQL configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin@localhost/analytics_db'
@@ -28,6 +34,9 @@ class Customer(db.Model):
     city = db.Column(db.String(255))
     country = db.Column(db.String(255))
     
+    # Foreign Key to Business
+    business_id = db.Column(db.Integer, db.ForeignKey('businesses.id'), nullable=False)  # Links customer to a business
+
     # Define the relationship with Subscription
     subscriptions = db.relationship('Subscription', backref='customer', lazy=True)
 
@@ -43,7 +52,8 @@ class Subscription(db.Model):
     subscription_start = db.Column(db.Date)
     subscription_end = db.Column(db.Date)
     subscription_amount = db.Column(db.Integer)
-    
+    # Foreign Key to Business
+    business_id = db.Column(db.Integer, db.ForeignKey('businesses.id'), nullable=False)  # Links subscription to a business
     # Define the foreign key to the SubscriptionPlan table
     subscription_plan_id = db.Column(db.Integer, db.ForeignKey('subscription_plans.id'))
     
@@ -65,9 +75,58 @@ class SubscriptionPlan(db.Model):
     plan_name = db.Column(db.String(100))
     plan_details = db.Column(db.Text)
     price = db.Column(db.Integer)
+     # Foreign Key to Business
+    business_id = db.Column(db.Integer, db.ForeignKey('businesses.id'), nullable=False)  # Links plan to a business
 
     def __repr__(self):
         return f'<SubscriptionPlan {self.plan_name}>'
+
+# Business Model
+class Business(db.Model):
+    __tablename__ = 'businesses'
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Two name fields as per your request
+    name = db.Column(db.String(100), nullable=False)  # Business owner name or contact person name
+    business_name = db.Column(db.String(100), nullable=False)  # The name of the business itself
+    
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    address = db.Column(db.String(200))
+    city = db.Column(db.String(50))
+    country = db.Column(db.String(50))
+    
+    # Relationships to other tables (Customer, Subscription, Plan)
+    customers = db.relationship('Customer', backref='business', lazy=True)
+    subscriptions = db.relationship('Subscription', backref='business', lazy=True)
+    plans = db.relationship('SubscriptionPlan', backref='business', lazy=True)
+
+# Route for login page
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        business_name = request.form.get('business_name')
+        
+        # Find the business by name
+        business = Business.query.filter_by(business_name=business_name).first()
+
+        if business:
+            session['business_id'] = business.id
+            session['business_name'] = business.business_name
+            return redirect(url_for('index'))  # Redirect to the index after login
+        else:
+            flash("Invalid business name, please try again.")
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    # Clear session data to log out the user
+    session.pop('business_id', None)
+    session.pop('business_name', None)
+    
+    # Redirect to the login page after logging out
+    return redirect(url_for('login'))
 
 
 def group_by_period(query, period):
@@ -112,7 +171,14 @@ def get_grouped_data(period):
     return revenue_data, growth_data, churn_data
 
 @app.route('/')
-def home():
+@app.route('/index')
+def index():
+    if 'business_id' not in session:
+        return redirect(url_for('login'))  # Redirect to login if not logged in
+    
+    business_id = session['business_id']
+    business_name = session['business_name']
+    
     # Get the grouping period from the request (day, week, month, year)
     period = request.args.get('period', 'month')  # Default is 'month'
 
