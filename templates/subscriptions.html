@@ -4,48 +4,33 @@
     <meta charset="UTF-8">
     <title>Subscription List</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <h1 style="text-align: center;">Subscription List</h1>
-
-    <!-- Filter Section -->
-    <form method="GET" action="/subscriptions" class="filter-form">
-        <input type="text" name="search" value="{{ search_query }}" placeholder="Search by customer name" class="filter-input">
-        <select name="status" class="filter-input">
-            <option value="">All Statuses</option>
-            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-        </select>
-        <button type="submit" class="filter-btn">Filter</button>
-    </form>
-
-    <!-- Table to display subscriptions -->
-    <table>
-        <tr>
-            <th>Customer</th>
-            <th>Subscription Name</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-        {% for subscription in subscriptions %}
-        <tr>
-            <td>{{ subscription.customer.name }}</td>
-            <td>{{ subscription.name }}</td>
-            <td>{{ subscription.subscription_amount }}</td>
-            <td>{{ subscription.status }}</td>
-            <td>
-                <a href="/edit_subscription/{{ subscription.id }}" class="btn">Edit</a>
-                <a href="/delete_subscription/{{ subscription.id }}" class="btn">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-
-    <!-- Button to add a new subscription -->
-    <a href="/add_subscription" class="btn">Add New Subscription</a>
-
     <style>
+        /* Style the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        table th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: center;
+        }
+        table td {
+            padding: 12px;
+            background-color: #fff;
+            color: #333;
+        }
+        table th a {
+            color: white;
+            text-decoration: none;
+        }
+        table th a:hover {
+            text-decoration: underline;
+        }
         .filter-form {
             margin: 20px 0;
             text-align: center;
@@ -70,31 +55,106 @@
         .filter-btn:hover {
             background-color: #0056b3;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        table th, table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-        table th {
-            background-color: #f2f2f2;
-            text-align: left;
-        }
         .btn {
-            display: inline-block;
-            padding: 10px;
-            margin: 5px;
+            padding: 10px 15px;
             background-color: #007bff;
             color: white;
             text-decoration: none;
-            border-radius: 4px;
+            border-radius: 5px;
+            margin: 5px;
+            display: inline-block;
         }
         .btn:hover {
             background-color: #0056b3;
         }
+        /* Pagination */
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination a, .pagination span {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 0 5px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .pagination a:hover {
+            background-color: #0056b3;
+        }
+        .pagination .active {
+            background-color: #0056b3;
+        }
     </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Subscription List</h1>
+
+    <!-- Button to add a new subscription at the top -->
+    <div style="text-align: center; margin-bottom: 20px;">
+        <a href="/add_subscription" class="btn">Add New Subscription</a>
+        <a href="/" class="btn">Return to Dashboard</a>
+    </div>
+
+    <!-- Filter Section -->
+    <form method="GET" action="/subscriptions" class="filter-form">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search by customer name" class="filter-input">
+        <select name="status" class="filter-input">
+            <option value="">All Statuses</option>
+            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+            <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+        <select name="limit" class="filter-input">
+            <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+            <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+        </select>
+        <button type="submit" class="filter-btn">Filter</button>
+    </form>
+
+    <!-- Table to display subscriptions -->
+    <table>
+        <tr>
+            <th><a href="{{ url_for('show_subscriptions', sort_by='customer_id', order=next_order, search=search_query, status=status_filter, limit=limit) }}">Customer ID {% if sort_by == 'customer_id' %}{{ sort_arrow }}{% endif %}</a></th>
+            <th><a href="{{ url_for('show_subscriptions', sort_by='customer.name', order=next_order, search=search_query, status=status_filter, limit=limit) }}">Customer Name {% if sort_by == 'customer.name' %}{{ sort_arrow }}{% endif %}</a></th>
+            <th><a href="{{ url_for('show_subscriptions', sort_by='plan_name', order=next_order, search=search_query, status=status_filter, limit=limit) }}">Plan Name {% if sort_by == 'plan_name' %}{{ sort_arrow }}{% endif %}</a></th>
+            <th><a href="{{ url_for('show_subscriptions', sort_by='subscription_amount', order=next_order, search=search_query, status=status_filter, limit=limit) }}">Amount {% if sort_by == 'subscription_amount' %}{{ sort_arrow }}{% endif %}</a></th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for subscription, customer, plan in subscriptions.items %}
+        <tr>
+            <td>{{ customer.id }}</td>
+            <td>{{ customer.name }}</td>
+            <td>{{ plan.plan_name }}</td>
+            <td>{{ subscription.subscription_amount }}</td>
+            <td>{{ subscription.status }}</td>
+            <td>
+                <a href="/edit_subscription/{{ subscription.id }}" class="btn">Edit</a>
+                <a href="/delete_subscription/{{ subscription.id }}" class="btn">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- Pagination Links -->
+    <div class="pagination">
+        {% if subscriptions.has_prev %}
+            <a href="{{ url_for('show_subscriptions', page=subscriptions.prev_num, search=search_query, status=status_filter, limit=limit, sort_by=sort_by, order=order) }}">Previous</a>
+        {% endif %}
+        {% for p in range(start_page, end_page + 1) %}
+            {% if p == subscriptions.page %}
+                <span class="active">{{ p }}</span>
+            {% else %}
+                <a href="{{ url_for('show_subscriptions', page=p, search=search_query, status=status_filter, limit=limit, sort_by=sort_by, order=order) }}">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if subscriptions.has_next %}
+            <a href="{{ url_for('show_subscriptions', page=subscriptions.next_num, search=search_query, status=status_filter, limit=limit, sort_by=sort_by, order=order) }}">Next</a>
+        {% endif %}
+    </div>
 </body>
 </html>

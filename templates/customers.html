@@ -8,47 +8,176 @@
 <body>
     <h1 style="text-align: center;">Customer List</h1>
 
+    <div style="text-align: center; margin-bottom: 20px;">
+    <!-- Return to Dashboard Button -->
+    <a href="/" class="btn return-btn">Return to Dashboard</a>
+    <!-- Button to add a new customer -->
+    <a href="/add_customer" class="btn add-btn">Add New Customer</a>
+    </div> 
+
     <!-- Filter Section -->
     <form method="GET" action="/customers" class="filter-form">
         <input type="text" name="search" value="{{ search_query }}" placeholder="Search by name or email" class="filter-input">
-        <button type="submit" class="filter-btn">Search</button>
+        <select name="per_page" class="filter-input">
+            <option value="20" {% if per_page == 20 %}selected{% endif %}>Show 20</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>Show 50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>Show 100</option>
+        </select>
+        <button type="submit" class="filter-btn">Apply</button>
     </form>
 
-    <!-- Table to display customers -->
+    <!-- Table to display customers with sorting -->
     <table>
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Actions</th>
-        </tr>
-        {% for customer in customers %}
-        <tr>
-            <td>{{ customer.name }}</td>
-            <td>{{ customer.email }}</td>
-            <td>{{ customer.phone }}</td>
-            <td>
-                <a href="/edit_customer/{{ customer.id }}" class="btn">Edit</a>
-                <a href="/delete_customer/{{ customer.id }}" class="btn">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
+        <thead>
+            <tr>
+                <th><a href="{{ url_for('show_customers', page=page, search=search_query, per_page=per_page, sort_by='name', order='asc' if order == 'desc' else 'desc') }}">Name {% if sort_by == 'name' %}<span>{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}</a></th>
+                <th><a href="{{ url_for('show_customers', page=page, search=search_query, per_page=per_page, sort_by='email', order='asc' if order == 'desc' else 'desc') }}">Email {% if sort_by == 'email' %}<span>{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}</a></th>
+                <th><a href="{{ url_for('show_customers', page=page, search=search_query, per_page=per_page, sort_by='phone', order='asc' if order == 'desc' else 'desc') }}">Phone {% if sort_by == 'phone' %}<span>{{ '▲' if order == 'asc' else '▼' }}</span>{% endif %}</a></th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers.items %}
+            <tr>
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.email }}</td>
+                <td>{{ customer.phone }}</td>
+                <td>
+                    <a href="/edit_customer/{{ customer.id }}" class="btn">Edit</a>
+                    <a href="/delete_customer/{{ customer.id }}" class="btn">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
+<!-- Pagination Links -->
+<div style="text-align: center; margin-top: 20px;">
+    <nav>
+        <ul class="pagination">
+            <!-- Previous Button -->
+            {% if customers.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('show_customers', page=customers.prev_num, search=search_query, per_page=per_page, sort_by=sort_by, order=order) }}">Previous</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+            {% endif %}
 
-    <!-- Button to add a new customer -->
-    <a href="/add_customer" class="btn">Add New Customer</a>
+            <!-- Page Number Buttons -->
+            {% set page_start = max(customers.page - 2, 1) %}
+            {% set page_end = min(customers.page + 2, customers.pages) %}
+            {% for page_num in range(page_start, page_end + 1) %}
+                {% if page_num == customers.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('show_customers', page=page_num, search=search_query, per_page=per_page, sort_by=sort_by, order=order) }}">{{ page_num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next Button -->
+            {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('show_customers', page=customers.next_num, search=search_query, per_page=per_page, sort_by=sort_by, order=order) }}">Next</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+
+<style>
+   .pagination {
+    display: inline-block;
+    padding-left: 0;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.pagination .page-item {
+    display: inline;
+}
+
+.pagination .page-link {
+    padding: 10px 15px;
+    margin: 0 5px;
+    color: #007bff;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+.pagination .page-link:hover {
+    background-color: #f8f9fa;
+    color: #0056b3;
+}
+
+.pagination .page-item.active .page-link {
+    z-index: 1;
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    pointer-events: none;
+}
+
+</style>
+
+
 
     <style>
+        /* Style the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        table th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: center;
+        }
+        table td {
+            padding: 12px;
+            background-color: #fff;
+            color: #333;
+        }
+        table th a {
+            color: white;
+            text-decoration: none;
+        }
+        table th a:hover {
+            text-decoration: underline;
+        }
         .filter-form {
             margin: 20px 0;
             text-align: center;
         }
         .filter-input {
             padding: 10px;
-            width: 300px;
+            width: 200px;
             border-radius: 4px;
             border: 1px solid #ccc;
             font-size: 16px;
+            margin-right: 10px;
         }
         .filter-btn {
             padding: 10px 20px;
@@ -62,31 +191,19 @@
         .filter-btn:hover {
             background-color: #0056b3;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        table th, table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-        table th {
-            background-color: #f2f2f2;
-            text-align: left;
-        }
         .btn {
-            display: inline-block;
-            padding: 10px;
-            margin: 5px;
+            padding: 10px 15px;
             background-color: #007bff;
             color: white;
             text-decoration: none;
-            border-radius: 4px;
+            border-radius: 5px;
+            margin: 5px;
+            display: inline-block;
         }
         .btn:hover {
             background-color: #0056b3;
         }
+        
     </style>
 </body>
 </html>
