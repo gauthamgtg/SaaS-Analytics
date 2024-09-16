@@ -168,42 +168,6 @@ def group_by_period(query, period):
     else:
         return func.date_trunc('month', query)  # Default is month
 
-def get_grouped_data(period):
-    # Get the logged-in business_id from the session
-    business_id = session.get('business_id')
-
-    if not business_id:
-        return "No business logged in", 403
-
-    # Group by period (day, week, month, year) based on request
-    period_group = group_by_period(Subscription.subscription_start, period)
-    
-    # Revenue data: filter by business_id
-    revenue_data = db.session.query(
-        period_group.label('period'), func.sum(Subscription.subscription_amount).label('total_revenue')
-    ).filter(Subscription.business_id == business_id).group_by('period').order_by('period').all()
-
-    # Growth data: Calculate % improvement over the last period
-    growth_data = []
-    last_revenue = None
-    for revenue in revenue_data:
-        if last_revenue is None:
-            growth_data.append(0)  # No growth for the first period
-        else:
-            growth = round(((revenue.total_revenue - last_revenue) / last_revenue) * 100 if last_revenue > 0 else 0)
-            growth_data.append(round(float(growth)))  # Convert to float and round it to nearest integer
-        last_revenue = revenue.total_revenue
-    
-    # Churn data: Calculate churn loss based on subscription end, filter by business_id
-    churn_data = db.session.query(
-        period_group.label('period'), func.sum(Subscription.subscription_amount).label('churn_loss')
-    ).filter(
-        Subscription.subscription_end < datetime.today().date(),
-        Subscription.business_id == business_id  # Filter by business_id
-    ).group_by('period').order_by('period').all()
-    
-    return revenue_data, growth_data, churn_data
-
 #Home data:
 @app.route('/')
 @app.route('/index')
@@ -223,9 +187,9 @@ def index():
     # Fetch data related to the logged-in business only, filtering by business_id in the Customer table
     total_customers = Customer.query.filter_by(business_id=business_id).count()
 
-    mrr = db.session.query(func.sum(CustomerSubscription.subscription_amount)).join(Customer, Customer.id == CustomerSubscription.customer_id).filter(
+    mrr = (db.session.query(func.sum(CustomerSubscription.subscription_amount)).join(Customer, Customer.id == CustomerSubscription.customer_id).filter(
         Customer.business_id == business_id
-    ).scalar() or 0
+    ).scalar() or 0)/12
 
     arr = mrr * 12  # Assuming ARR is MRR * 12
 
@@ -281,6 +245,30 @@ def index():
     churn_labels = [c.period.strftime('%Y-%m-%d') for c in churn_data_query]
     churn_data = [round(float(c.churn_loss)) for c in churn_data_query]
 
+
+    # Fetch total customers who churned (churn loss)
+    churnedcustomer_data_query = db.session.query(
+        period_group.label('period'), func.count(CustomerSubscription.id).label('churned_customers')
+    ).join(Customer, Customer.id == CustomerSubscription.customer_id).filter(
+        CustomerSubscription.subscription_end < datetime.today().date(),
+        Customer.business_id == business_id
+    ).group_by(period_group).order_by(period_group).all()
+
+    # Prepare churned customer labels and data for the chart
+    churned_cust_labels = [c.period.strftime('%Y-%m-%d') for c in churnedcustomer_data_query]
+    churned_cust_data = [round(float(c.churned_customers)) for c in churnedcustomer_data_query]
+
+    # Fetch monthly total customers (active or churned)
+    totalcustomer_data_query = db.session.query(
+        period_group.label('period'), func.count(CustomerSubscription.id).label('total_customers')
+    ).join(Customer, Customer.id == CustomerSubscription.customer_id).filter(
+        Customer.business_id == business_id
+    ).group_by(period_group).order_by(period_group).all()
+
+    # Prepare total customer labels and data for the chart
+    total_cust_labels = [c.period.strftime('%Y-%m-%d') for c in totalcustomer_data_query]
+    total_cust_data = [round(float(c.total_customers)) for c in totalcustomer_data_query]
+
     # Fetch month-wise total amount received for the monthly amount chart
     monthly_data = []
     monthly_labels = []
@@ -315,10 +303,138 @@ def index():
                            growth_data=growth_data,
                            churn_labels=churn_labels,
                            churn_data=churn_data,
+                           churned_cust_labels= churned_cust_labels,
+                           churned_cust_data = churned_cust_data,
+                           total_cust_labels=total_cust_labels,
+                           total_cust_data=total_cust_data,
                            revenue_labels=revenue_labels,
                            revenue_data=revenue_data,
                            monthly_labels=monthly_labels,
                            monthly_data=monthly_data,
+                           period=period)  # Pass the selected period for the dropdown
+
+
+#Home data for admin panel:
+# @app.route('/')
+@app.route('/adminpanel')
+def adminpanel():
+
+    # Get the grouping period from the request (day, week, month, year)
+    period = request.args.get('period', 'month')  # Default is 'month'
+
+    # Group by period (day, week, month, year) based on request
+    period_group = group_by_period(Subscription.subscription_start, period)
+
+    # Fetch data related to the logged-in business only, filtering by business_id in the Customer table
+    ovr_total_customers = Business.query.count()
+
+    ovr_mrr = (db.session.query(func.sum(Subscription.subscription_amount)).join(Business, Business.id == Subscription.business_id).scalar() or 0)/12
+
+    ovr_arr = ovr_mrr * 12  # Assuming ARR is MRR * 12
+
+    ovr_active_customers = Subscription.query.join(Business, Business.id == Subscription.business_id).filter(
+        Subscription.subscription_start <= datetime.today().date(),
+        Subscription.subscription_end >= datetime.today().date()    ).count()
+
+    # Retention and churn rate calculations
+    ovr_retention_rate = calculate_ovr_retention_rate()  # Pass business_id
+    ovr_churn_rate = calculate_ovr_churn_rate()  # Pass business_id
+
+    # Fetch top customers based on total spend, filtered by business_id
+    ovr_top_customers = db.session.query(
+        Business.name, Business.email, func.sum(Subscription.subscription_amount).label('total_spend')
+    ).join(Business, Business.id == Subscription.business_id).group_by(Business.id).order_by(
+        func.sum(Subscription.subscription_amount).desc()
+    ).limit(5).all()
+
+    # Fetch revenue data grouped by the selected period (day, week, month, year)
+    ovr_revenue_data_query = db.session.query(
+        period_group.label('period'), func.sum(Subscription.subscription_amount).label('total_revenue')
+    ).join(Business, Business.id == Subscription.business_id).group_by(period_group).order_by(period_group).all()
+
+    # Convert revenue data to float and round
+    ovr_revenue_labels = [r.period.strftime('%Y-%m-%d') for r in ovr_revenue_data_query]
+    ovr_revenue_data = [round(float(r.total_revenue)) for r in ovr_revenue_data_query]
+
+    # Fetch growth data: Calculate % improvement over the last period
+    ovr_growth_data = []
+    ovr_last_revenue = None
+    for r in ovr_revenue_data_query:
+        if ovr_last_revenue is None:
+            ovr_growth_data.append(0)  # No growth for the first period
+        else:
+            growth = ((r.total_revenue - ovr_last_revenue) / ovr_last_revenue) * 100 if ovr_last_revenue > 0 else 0
+            ovr_growth_data.append(round(float(growth)))
+        ovr_last_revenue = r.total_revenue
+
+    # Fetch churn data: Calculate churn loss based on subscription end
+    ovr_churn_data_query = db.session.query(
+        period_group.label('period'), func.sum(Subscription.subscription_amount).label('churn_loss')
+    ).join(Business, Business.id == Subscription.business_id).filter(
+        Subscription.subscription_end < datetime.today().date()
+    ).group_by(period_group).order_by(period_group).all()
+
+    ovr_churn_labels = [c.period.strftime('%Y-%m-%d') for c in ovr_churn_data_query]
+    ovr_churn_data = [round(float(c.churn_loss)) for c in ovr_churn_data_query]
+
+    # Fetch total subscriptions that ended (churn loss)
+    churned_ovr_data_query = db.session.query(
+        period_group.label('period'), func.count(Subscription.id).label('churned_subscriptions')
+    ).join(Business, Business.id == Subscription.business_id).filter(
+        Subscription.subscription_end < datetime.today().date()
+    ).group_by(period_group).order_by(period_group).all()
+
+    # Prepare churned subscription labels and data for the chart
+    churned_sub_labels = [c.period.strftime('%Y-%m-%d') for c in churned_ovr_data_query]
+    churned_sub_data = [round(float(c.churned_subscriptions)) for c in churned_ovr_data_query]
+
+    # Fetch monthly total subscriptions (active or churned)
+    ovr_subscription_data_query = db.session.query(
+        period_group.label('period'), func.count(Subscription.id).label('total_subscriptions')
+    ).join(Business, Business.id == Subscription.business_id).group_by(period_group).order_by(period_group).all()
+
+    # Prepare total subscription labels and data for the chart
+    total_sub_labels = [c.period.strftime('%Y-%m-%d') for c in ovr_subscription_data_query]
+    total_sub_data = [round(float(c.total_subscriptions)) for c in ovr_subscription_data_query]
+
+    # Fetch month-wise total amount received for the monthly amount chart
+    ovr_monthly_data = []
+    ovr_monthly_labels = []
+    for i in range(11, -1, -1):  # Loop through last 12 months (ascending)
+        month_start = (datetime.today().replace(day=1) - timedelta(days=i * 30)).replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1)  # To get the next month's 1st day
+        total_amount = db.session.query(func.sum(Subscription.subscription_amount)).join(Business, Business.id == Subscription.business_id).filter(
+            Subscription.payment_date >= month_start,
+            Subscription.payment_date < month_end).scalar() or 0
+        ovr_monthly_labels.append(month_start.strftime('%B'))  # Append month name
+        ovr_monthly_data.append(round(float(total_amount)))
+
+    # Debugging step: Print the fetched data to console for verification
+    print(f"Revenue Labels: {ovr_revenue_labels}")
+    print(f"Revenue Data: {ovr_revenue_data}")
+    print(f"Growth Data: {ovr_growth_data}")
+    print(f"Churn Data: {churned_sub_data}")
+    print(f"Monthly Data: {ovr_monthly_data}")
+
+    # Render the template and pass all required data
+    return render_template('adminpanel.html',
+                           ovr_total_customers=ovr_total_customers,
+                           ovr_mrr=round(float(ovr_mrr)),
+                           ovr_arr=round(float(ovr_arr)),
+                           ovr_active_customers=ovr_active_customers,
+                           ovr_retention_rate=ovr_retention_rate,
+                           ovr_churn_rate=ovr_churn_rate,
+                           ovr_top_customers=ovr_top_customers,
+                           growth_labels=ovr_revenue_labels,  # Using revenue labels for growth chart too
+                           growth_data=ovr_growth_data,
+                           churned_sub_labels=churned_sub_labels,
+                           churned_sub_data=churned_sub_data,
+                           ovr_churn_labels= ovr_churn_labels,
+                           ovr_churn_data = ovr_churn_data,
+                           ovr_revenue_labels=ovr_revenue_labels,
+                           ovr_revenue_data=ovr_revenue_data,
+                           ovr_monthly_labels=ovr_monthly_labels,
+                           ovr_monthly_data=ovr_monthly_data,
                            period=period)  # Pass the selected period for the dropdown
 
 
@@ -361,6 +477,48 @@ def calculate_retention_rate(business_id):
         CustomerSubscription.subscription_start <= today - timedelta(days=30),
         CustomerSubscription.subscription_end >= today,
         Customer.business_id == business_id
+    ).count()
+
+    # Calculate retention rate (retained customers / total customers) * 100
+    retention_rate = (retained_customers / total_customers_at_start) * 100 if total_customers_at_start > 0 else 0
+    return round(retention_rate)
+
+
+# Churn rate calculation - Business Level
+def calculate_ovr_churn_rate():
+    today = datetime.today().date()
+    last_month = today - timedelta(days=30)
+
+    # Get the number of customers whose subscriptions ended last month
+    churned_customers_last_month = CustomerSubscription.query.join(Customer).filter(
+        CustomerSubscription.subscription_end < today,
+        CustomerSubscription.subscription_end >= last_month
+    ).count()
+
+    # Total number of customers from last month (those who were subscribed)
+    total_customers_last_month = CustomerSubscription.query.join(Customer).filter(
+        CustomerSubscription.subscription_start <= last_month,
+        CustomerSubscription.subscription_end >= last_month
+    ).count()
+
+    # Calculate churn rate (customers lost / total customers) * 100
+    churn_rate = (churned_customers_last_month / total_customers_last_month) * 100 if total_customers_last_month > 0 else 0
+    return round(churn_rate)
+
+
+# Retention rate calculation
+def calculate_ovr_retention_rate():
+    today = datetime.today().date()
+
+    # Calculate total number of active customers at the beginning of the month
+    total_customers_at_start = CustomerSubscription.query.join(Customer).filter(
+        CustomerSubscription.subscription_start <= today - timedelta(days=30)
+    ).count()
+
+    # Calculate number of customers still active at the end of the period (today)
+    retained_customers = CustomerSubscription.query.join(Customer).filter(
+        CustomerSubscription.subscription_start <= today - timedelta(days=30),
+        CustomerSubscription.subscription_end >= today
     ).count()
 
     # Calculate retention rate (retained customers / total customers) * 100

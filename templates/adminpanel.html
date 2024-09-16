@@ -79,12 +79,12 @@
         <!-- KPIs Section -->
         <div class="kpis">
             <!-- Display key metrics -->
-            <div class="kpi-card"><h2>Total Customers</h2><p>{{ total_customers }}</p></div>
-            <div class="kpi-card"><h2>Monthly Recurring Revenue (MRR)</h2><p>${{ mrr }}</p></div>
-            <div class="kpi-card"><h2>Annual Recurring Revenue (ARR)</h2><p>${{ arr }}</p></div>
-            <div class="kpi-card"><h2>Active Customers</h2><p>{{ active_customers }}</p></div>
-            <div class="kpi-card"><h2>Retention Rate</h2><p>{{ retention_rate }}%</p></div>
-            <div class="kpi-card"><h2>Churn Rate</h2><p>{{ churn_rate }}%</p></div>
+            <div class="kpi-card"><h2>Total Customers</h2><p>{{ ovr_total_customers }}</p></div>
+            <div class="kpi-card"><h2>Monthly Recurring Revenue (MRR)</h2><p>${{ ovr_mrr }}</p></div>
+            <div class="kpi-card"><h2>Annual Recurring Revenue (ARR)</h2><p>${{ ovr_arr }}</p></div>
+            <div class="kpi-card"><h2>Active Customers</h2><p>{{ ovr_active_customers }}</p></div>
+            <div class="kpi-card"><h2>Retention Rate</h2><p>{{ ovr_retention_rate }}%</p></div>
+            <div class="kpi-card"><h2>Churn Rate</h2><p>{{ ovr_churn_rate }}%</p></div>
         </div>
 
         <!-- Buttons to view customers and subscriptions list -->
@@ -139,7 +139,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for customer in top_customers %}
+                    {% for customer in ovr_top_customers %}
                     <tr>
                         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">{{ customer.name }}</td>
                         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">{{ customer.email }}</td>
@@ -155,16 +155,13 @@
             <p>Data Printing for Debugging</p>
             <p>Growth Labels: {{ growth_labels }}</p>
             <p>Growth Data: {{ growth_data }}</p>
-            <p>Churn Labels: {{ churn_labels }}</p>
-            <p>Churn Data: {{ churn_data }}</p>
-            <p>Revenue Labels: {{ revenue_labels }}</p>
-            <p>Revenue Data: {{ revenue_data }}</p>
-            <p>Monthly Labels: {{ monthly_labels }}</p>
-            <p>Monthly Data: {{ monthly_data }}</p>
-            <p>Customer Churn Data: {{ churned_cust_data }}</p>
-            <p>Customer Churn Labels: {{ churned_cust_labels }}</p>
+            <p>Churn Labels: {{ churned_sub_labels }}</p>
+            <p>Churn Data: {{ churned_sub_data }}</p>
+            <p>Revenue Labels: {{ ovr_revenue_labels }}</p>
+            <p>Revenue Data: {{ ovr_revenue_data }}</p>
+            <p>Monthly Labels: {{ ovr_monthly_labels }}</p>
+            <p>Monthly Data: {{ ovr_monthly_data }}</p>
         </div>
-
         <script>
             // Customer Growth Chart
             const customerGrowthChart = new Chart(document.getElementById('customerGrowthChart'), {
@@ -176,7 +173,7 @@
                         data: {{ growth_data|safe }},
                         backgroundColor: 'rgba(0, 123, 255, 0.5)',
                         borderColor: 'rgba(0, 123, 255, 1)',
-                        fill: false,
+                        fill: false
                     }]
                 },
                 options: {
@@ -187,7 +184,7 @@
                             text: 'Customer Growth Over Time'
                         },
                         legend: {
-                            position: 'top',
+                            position: 'top'
                         }
                     },
                     scales: {
@@ -207,19 +204,18 @@
                     }
                 }
             });
-            ;
-
+        
             // Churn Rate Chart
             const churnRateChart = new Chart(document.getElementById('churnRateChart'), {
                 type: 'line',
                 data: {
-                    labels: {{ churn_labels|safe }},
+                    labels: {{ churned_sub_labels|safe }},
                     datasets: [{
                         label: 'Churn Rate',
-                        data: {{ churn_data|safe }},
+                        data: {{ churned_sub_data|safe }},
                         backgroundColor: 'rgba(255, 99, 132, 0.5)',
                         borderColor: 'rgba(255, 99, 132, 1)',
-                        fill: false,
+                        fill: false
                     }]
                 },
                 options: {
@@ -230,7 +226,7 @@
                             text: 'Churn Rate Over Time'
                         },
                         legend: {
-                            position: 'top',
+                            position: 'top'
                         }
                     },
                     scales: {
@@ -250,19 +246,18 @@
                     }
                 }
             });
-
-
-            // Churn Rate Chart
+        
+            // Monthly Customer Churn Chart
             const monthlycustomerchurn = new Chart(document.getElementById('monthlycustomerchurn'), {
                 type: 'line',
                 data: {
                     labels: {{ churned_cust_labels|safe }},
                     datasets: [{
-                        label: 'Churn Rate',
+                        label: 'Monthly Customer Churn',
                         data: {{ churned_cust_data|safe }},
                         backgroundColor: 'rgba(255, 99, 132, 0.5)',
                         borderColor: 'rgba(255, 99, 132, 1)',
-                        fill: false,
+                        fill: false
                     }]
                 },
                 options: {
@@ -273,7 +268,7 @@
                             text: 'Churned Customers Over Time'
                         },
                         legend: {
-                            position: 'top',
+                            position: 'top'
                         }
                     },
                     scales: {
@@ -293,19 +288,17 @@
                     }
                 }
             });
-
-
-
+        
             // Revenue Trend Chart
             const revenueTrendChart = new Chart(document.getElementById('revenueTrendChart'), {
                 type: 'line',
                 data: {
-                    labels: {{ revenue_labels|safe }},
+                    labels: {{ ovr_revenue_labels|safe }},
                     datasets: [{
                         label: 'Revenue Trend',
-                        data: {{ revenue_data|safe }},
+                        data: {{ ovr_revenue_data|safe }},
                         backgroundColor: 'rgba(40, 167, 69, 0.5)',
-                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderColor: 'rgba(40, 167, 69, 1)'
                     }]
                 },
                 options: {
@@ -316,7 +309,7 @@
                             text: 'Revenue Trend Over Time'
                         },
                         legend: {
-                            position: 'top',
+                            position: 'top'
                         }
                     },
                     scales: {
