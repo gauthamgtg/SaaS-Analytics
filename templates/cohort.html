@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cohort Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js for graphs -->
+</head>
+<body>
+    <h1>Cohort Analysis</h1>
+
+    <!-- Sidebar to choose between Customer and Revenue Cohort -->
+    <div class="sidebar">
+        <ul>
+            <li><a href="/cohort?type=customer">Customer Cohort</a></li>
+            <li><a href="/cohort?type=revenue">Revenue Cohort</a></li>
+        </ul>
+    </div>
+
+    <!-- Display cohort tables -->
+    <h2>Customer Cohort Table</h2>
+    <div>
+        {{ cohort_table | safe }}
+    </div>
+
+    <h2>Retention Rate Table</h2>
+    <div>
+        {{ retention_table | safe }}
+    </div>
+
+    <!-- Chart for Cohort Analysis -->
+    <h2>Cohort Analysis Chart</h2>
+    <div>
+        <canvas id="cohortChart" width="800" height="400"></canvas>
+    </div>
+
+    <script>
+        // Prepare data for chart
+        const cohortData = {{ cohort_data | tojson }};
+        const labels = Object.keys(cohortData);
+        const datasets = Object.keys(cohortData[labels[0]]).map(function(period, index) {
+            return {
+                label: 'Month ' + period,
+                data: labels.map(function(label) { return cohortData[label][period]; }),
+                borderColor: `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`,
+                fill: false
+            };
+        });
+
+        // Create chart
+        const ctx = document.getElementById('cohortChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Customer Retention Over Time (Cohort Analysis)'
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Cohort Month'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Retention (%)'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

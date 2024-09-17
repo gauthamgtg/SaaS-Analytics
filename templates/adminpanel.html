@@ -120,216 +120,279 @@
         </style>
 
         <!-- Graphs Section -->
-        <div class="graphs">
-            <canvas id="customerGrowthChart"></canvas>
-            <canvas id="churnRateChart"></canvas>
-            <canvas id="revenueTrendChart"></canvas>
-            <canvas id="monthlyAmountChart"></canvas>
-            <canvas id="monthlycustomerchurn"></canvas>
-        </div>
-                    <!-- Top Customers Table -->
-        <h2 style="text-align: center; margin-top: 40px;">Top Customers by Spend</h2>
-        <div class="top-customers-table" style="margin: 0 auto; max-width: 80%; padding: 20px;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th style="background-color: #007bff; color: white; padding: 10px; text-align: center;">Name</th>
-                        <th style="background-color: #007bff; color: white; padding: 10px; text-align: center;">Email</th>
-                        <th style="background-color: #007bff; color: white; padding: 10px; text-align: center;">Total Spend</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for customer in ovr_top_customers %}
-                    <tr>
-                        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">{{ customer.name }}</td>
-                        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">{{ customer.email }}</td>
-                        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">${{ '%.2f' % customer.total_spend }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+<div class="graphs">
+    <canvas id="customerGrowthChart"></canvas>
+    <canvas id="churnRateChart"></canvas>
+    <canvas id="revenueTrendChart"></canvas>
+    <canvas id="monthlyAmountChart"></canvas>
+    <canvas id="monthlycustomerchurn"></canvas>
+</div>
 
-        <!-- Debugging Block: Print Data -->
-        <div>
-            <p>Data Printing for Debugging</p>
-            <p>Growth Labels: {{ growth_labels }}</p>
-            <p>Growth Data: {{ growth_data }}</p>
-            <p>Churn Labels: {{ churned_sub_labels }}</p>
-            <p>Churn Data: {{ churned_sub_data }}</p>
-            <p>Revenue Labels: {{ ovr_revenue_labels }}</p>
-            <p>Revenue Data: {{ ovr_revenue_data }}</p>
-            <p>Monthly Labels: {{ ovr_monthly_labels }}</p>
-            <p>Monthly Data: {{ ovr_monthly_data }}</p>
-        </div>
-        <script>
-            // Customer Growth Chart
-            const customerGrowthChart = new Chart(document.getElementById('customerGrowthChart'), {
-                type: 'line',
-                data: {
-                    labels: {{ growth_labels|safe }},
-                    datasets: [{
-                        label: 'Customer Growth (%)',
-                        data: {{ growth_data|safe }},
-                        backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                        borderColor: 'rgba(0, 123, 255, 1)',
-                        fill: false
-                    }]
+<!-- Top Customers Table -->
+<h2 style="text-align: center; margin-top: 40px;">Top Customers by Spend</h2>
+<div class="top-customers-table" style="margin: 0 auto; max-width: 80%; padding: 20px;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Total Spend</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in ovr_top_customers %}
+            <tr>
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.email }}</td>
+                <td>${{ '%.2f' % customer.total_spend }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Debugging Block: Print Data -->
+<div>
+    <p>Data Printing for Debugging</p>
+    <p>Growth Labels: {{ growth_labels }}</p>
+    <p>Growth Data: {{ growth_data }}</p>
+    <p>Churn Labels: {{ churned_sub_labels }}</p>
+    <p>Churn Data: {{ churned_sub_data }}</p>
+    <p>Revenue Labels: {{ ovr_revenue_labels }}</p>
+    <p>Revenue Data: {{ ovr_revenue_data }}</p>
+    <p>Monthly Labels: {{ ovr_monthly_labels }}</p>
+    <p>Monthly Data: {{ ovr_monthly_data }}</p>
+</div>
+
+<script>
+    const growthLabels = {{ growth_labels|default([])|tojson|safe }};
+    const growthData = {{ growth_data|default([])|tojson|safe }};
+    const churnedSubLabels = {{ churned_sub_labels|default([])|tojson|safe }};
+    const churnedSubData = {{ churned_sub_data|default([])|tojson|safe }};
+    const churnedCustLabels = {{ churned_cust_labels|default([])|tojson|safe }};
+    const churnedCustData = {{ churned_cust_data|default([])|tojson|safe }};
+    const revenueLabels = {{ ovr_revenue_labels|default([])|tojson|safe }};
+    const revenueData = {{ ovr_revenue_data|default([])|tojson|safe }};
+    const monthlyLabels = {{ ovr_monthly_labels|default([])|tojson|safe }};
+    const monthlyData = {{ ovr_monthly_data|default([])|tojson|safe }};
+
+    // Function to safely format labels and data for Chart.js
+    function formatData(rawData) {
+        return rawData.map(function(item) {
+            return isNaN(item) ? 0 : item; // Ensure all data points are numbers
+        });
+    }
+
+    // Customer Growth Chart
+    const customerGrowthChart = new Chart(document.getElementById('customerGrowthChart'), {
+        type: 'line',
+        data: {
+            labels: growthLabels,
+            datasets: [{
+                label: 'Customer Growth (%)',
+                data: formatData(growthData),
+                backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Customer Growth Over Time'
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Customer Growth Over Time'
-                        },
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Period'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Growth (%)'
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                legend: {
+                    position: 'top'
                 }
-            });
-        
-            // Churn Rate Chart
-            const churnRateChart = new Chart(document.getElementById('churnRateChart'), {
-                type: 'line',
-                data: {
-                    labels: {{ churned_sub_labels|safe }},
-                    datasets: [{
-                        label: 'Churn Rate',
-                        data: {{ churned_sub_data|safe }},
-                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        fill: false
-                    }]
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Period'
+                    }
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Churn Rate Over Time'
-                        },
-                        legend: {
-                            position: 'top'
-                        }
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Growth (%)'
                     },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Period'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Churn Rate (%)'
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                    beginAtZero: true
                 }
-            });
-        
-            // Monthly Customer Churn Chart
-            const monthlycustomerchurn = new Chart(document.getElementById('monthlycustomerchurn'), {
-                type: 'line',
-                data: {
-                    labels: {{ churned_cust_labels|safe }},
-                    datasets: [{
-                        label: 'Monthly Customer Churn',
-                        data: {{ churned_cust_data|safe }},
-                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        fill: false
-                    }]
+            }
+        }
+    });
+
+    // Churn Rate Chart
+    const churnRateChart = new Chart(document.getElementById('churnRateChart'), {
+        type: 'line',
+        data: {
+            labels: churnedSubLabels,
+            datasets: [{
+                label: 'Churn Rate',
+                data: formatData(churnedSubData),
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Churn Rate Over Time'
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Churned Customers Over Time'
-                        },
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Period'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Customers Churn Rate (%)'
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                legend: {
+                    position: 'top'
                 }
-            });
-        
-            // Revenue Trend Chart
-            const revenueTrendChart = new Chart(document.getElementById('revenueTrendChart'), {
-                type: 'line',
-                data: {
-                    labels: {{ ovr_revenue_labels|safe }},
-                    datasets: [{
-                        label: 'Revenue Trend',
-                        data: {{ ovr_revenue_data|safe }},
-                        backgroundColor: 'rgba(40, 167, 69, 0.5)',
-                        borderColor: 'rgba(40, 167, 69, 1)'
-                    }]
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Period'
+                    }
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Revenue Trend Over Time'
-                        },
-                        legend: {
-                            position: 'top'
-                        }
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Churn Rate (%)'
                     },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Period'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Total Revenue'
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                    beginAtZero: true
                 }
-            });
-        </script>
+            }
+        }
+    });
+
+    // Monthly Customer Churn Chart
+    const monthlyCustomerChurn = new Chart(document.getElementById('monthlycustomerchurn'), {
+        type: 'line',
+        data: {
+            labels: churnedCustLabels,
+            datasets: [{
+                label: 'Monthly Customer Churn',
+                data: formatData(churnedCustData),
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Churned Customers Over Time'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Period'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Customers Churn Rate (%)'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Revenue Trend Chart
+    const revenueTrendChart = new Chart(document.getElementById('revenueTrendChart'), {
+        type: 'line',
+        data: {
+            labels: revenueLabels,
+            datasets: [{
+                label: 'Revenue Trend',
+                data: formatData(revenueData),
+                backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                borderColor: 'rgba(40, 167, 69, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Revenue Trend Over Time'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Period'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Total Revenue'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Monthly Revenue Amount Chart
+    const monthlyAmountChart = new Chart(document.getElementById('monthlyAmountChart'), {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Monthly Amount',
+                data: formatData(monthlyData),
+                backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Revenue Over Time'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Revenue ($)'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
         
     </div>
 </body>

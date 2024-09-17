@@ -99,21 +99,26 @@
     </div>
 
     <!-- Filter Section -->
-    <form method="GET" action="/subscriptions" class="filter-form">
-        <input type="text" name="search" value="{{ search_query }}" placeholder="Search by customer name" class="filter-input">
-        <select name="status" class="filter-input">
-            <option value="">All Statuses</option>
-            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
-            <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
-            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
-        </select>
-        <select name="limit" class="filter-input">
-            <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
-            <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
-            <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
-        </select>
-        <button type="submit" class="filter-btn">Filter</button>
-    </form>
+<form method="GET" action="/subscriptions" class="filter-form">
+    <input type="text" name="search" value="{{ search_query }}" placeholder="Search by customer name" class="filter-input">
+    <select name="status" class="filter-input">
+        <option value="">All Statuses</option>
+        <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+        <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+    <select name="plan" class="filter-input">
+        <option value="">All Plans</option>
+            <option value="99" {% if plan_filter == 99 %}selected{% endif %}>99</option>
+            <option value="199" {% if plan_filter == 199 %}selected{% endif %}>199</option>
+    </select>
+    <select name="limit" class="filter-input">
+        <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+        <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+    </select>
+    <button type="submit" class="filter-btn">Filter</button>
+</form>
 
     <!-- Table to display subscriptions -->
     <table>

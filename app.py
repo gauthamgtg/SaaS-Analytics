@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, Response, jsonify
+from operator import attrgetter
+from flask import Flask, render_template, request, redirect, url_for, Response, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 import plotly.graph_objs as go
 import plotly.io as pio
 import plotly.express as px
 from datetime import datetime, timedelta
-from sqlalchemy import func
+from sqlalchemy import create_engine, func, extract, text
 import csv
 from io import StringIO
 from flask import Flask, render_template, redirect, url_for, session, request, flash
@@ -708,6 +709,7 @@ def show_subscriptions():
     business_id = session['business_id']
     search_query = request.args.get('search', '')
     status_filter = request.args.get('status', '')
+    plan_filter = request.args.get('subscription_amount', '')  # Add plan_filter variable#+
     limit = int(request.args.get('limit', 20))  # Default to 20 items per page
     page = request.args.get('page', 1, type=int)  # Get current page
 
@@ -740,6 +742,9 @@ def show_subscriptions():
     if status_filter:
         query = query.filter(CustomerSubscription.status == status_filter)
 
+    if plan_filter:  # Add condition to filter by plan_name#+
+        query = query.filter(CustomerSubscriptionPlan.subscription_amount == plan_filter)#+
+
     # Handle sorting based on the selected field
     if sort_by == 'plan_name':
         query = query.order_by(sort_order(CustomerSubscriptionPlan.plan_name))
@@ -762,6 +767,7 @@ def show_subscriptions():
                            subscriptions=subscriptions, 
                            search_query=search_query,
                            status_filter=status_filter, 
+                           plan_filter=plan_filter,  # Pass the plan_filter#+
                            limit=limit,
                            sort_by=sort_by, 
                            order=order, 
@@ -1019,6 +1025,68 @@ def filter_status():
 
     return render_template('index.html', customers=customers)
 
+engine = create_engine('postgresql://postgres:admin@localhost/analytics_db')
+
+#Cohort route
+@app.route('/cohort')
+def cohorts():
+    # Fetch the business ID from session or a secure source
+    business_id = session.get('business_id')
+
+    # Perform cohort analysis
+    df = fetch_data(business_id)
+    cohort_table, retention_table = perform_cohort_analysis(df)
+
+    # Prepare cohort data for chart
+    cohort_data = cohort_table.fillna(0).astype(int).to_dict(orient='index')
+
+    # Convert tables to HTML to display in template
+    cohort_table_html = cohort_table.to_html(classes='table table-striped', border=0)
+    retention_table_html = retention_table.to_html(classes='table table-striped', border=0)
+
+    # Render cohort data in HTML
+    return render_template('cohort.html', 
+                           cohort_table=cohort_table_html, 
+                           retention_table=retention_table_html,
+                           cohort_data=cohort_data)
+
+def fetch_data(business_id):
+    sql = """
+            SELECT
+                cs.customer_id,
+                cs.subscription_start
+            FROM customer_subscriptions cs
+            JOIN customers c ON cs.customer_id = c.id
+            WHERE c.business_id = %s
+        """
+    return pd.read_sql(sql, engine, params=(business_id,))
+
+def perform_cohort_analysis(df):
+    # Convert subscription start to a datetime
+    df['subscription_dt'] = pd.to_datetime(df['subscription_start'])
+
+    # Create columns for cohort and subscription month, and convert to period for grouping
+    df['sub_month'] = df['subscription_dt'].dt.to_period('M')
+    df['cohort'] = df.groupby('customer_id')['subscription_dt'].transform('min').dt.to_period('M')
+
+    # Group data by cohort and subscription month, and count unique customers
+    df_cohort = df.groupby(['cohort', 'sub_month']).agg(n_customers=('customer_id', 'nunique')).reset_index(drop=False)
+
+    # Calculate the period number (time passed since cohort start)
+    df_cohort['period_number'] = (df_cohort.sub_month - df_cohort.cohort).apply(attrgetter('n'))
+
+    # Pivot the table to get the cohort by period matrix
+    cohort_pivot = df_cohort.pivot_table(index='cohort', columns='period_number', values='n_customers')
+
+    # Convert cohort period to string for JSON serialization
+    cohort_pivot.index = cohort_pivot.index.astype(str)
+    cohort_pivot.columns = cohort_pivot.columns.astype(str)
+
+    # Calculate retention rates
+    cohort_size = cohort_pivot.iloc[:, 0]
+    retention_table = cohort_pivot.divide(cohort_size, axis=0)
+
+    return cohort_pivot, retention_table
 
 if __name__ == '__main__':
     app.run(debug=True)
