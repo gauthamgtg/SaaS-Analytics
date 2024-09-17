@@ -1037,18 +1037,16 @@ def cohorts():
     df = fetch_data(business_id)
     cohort_table, retention_table = perform_cohort_analysis(df)
 
-    # Prepare cohort data for chart
+    # Convert tables to dictionaries for rendering in the template
     cohort_data = cohort_table.fillna(0).astype(int).to_dict(orient='index')
-
-    # Convert tables to HTML to display in template
-    cohort_table_html = cohort_table.to_html(classes='table table-striped', border=0)
-    retention_table_html = retention_table.to_html(classes='table table-striped', border=0)
+    retention_data = retention_table.fillna(0).round(2).to_dict(orient='index')
 
     # Render cohort data in HTML
-    return render_template('cohort.html', 
-                           cohort_table=cohort_table_html, 
-                           retention_table=retention_table_html,
-                           cohort_data=cohort_data)
+    return render_template(
+        'cohort.html',
+        cohort_data=cohort_data,
+        retention_data=retention_data
+    )
 
 def fetch_data(business_id):
     sql = """

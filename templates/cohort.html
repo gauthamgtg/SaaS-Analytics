@@ -2,87 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cohort Analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js for graphs -->
+    <style>
+        /* Style for tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .table th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
-    <h1>Cohort Analysis</h1>
 
-    <!-- Sidebar to choose between Customer and Revenue Cohort -->
-    <div class="sidebar">
-        <ul>
-            <li><a href="/cohort?type=customer">Customer Cohort</a></li>
-            <li><a href="/cohort?type=revenue">Revenue Cohort</a></li>
-        </ul>
-    </div>
+<h2>Customer Cohort Table</h2>
+<table id="cohortTable" class="table"></table>
 
-    <!-- Display cohort tables -->
-    <h2>Customer Cohort Table</h2>
-    <div>
-        {{ cohort_table | safe }}
-    </div>
+<h2>Retention Rate Table</h2>
+<table id="retentionTable" class="table"></table>
 
-    <h2>Retention Rate Table</h2>
-    <div>
-        {{ retention_table | safe }}
-    </div>
+<script>
+    // Data for cohort and retention tables passed from Flask
+    const cohortData = {{ cohort_data | tojson }};
+    const retentionData = {{ retention_data | tojson }};
 
-    <!-- Chart for Cohort Analysis -->
-    <h2>Cohort Analysis Chart</h2>
-    <div>
-        <canvas id="cohortChart" width="800" height="400"></canvas>
-    </div>
+    // Helper function to calculate color based on value
+    // Helper function to calculate color based on value
+    function getColor(value, minValue, maxValue) {
+        if (value === 0) { // If value is zero, return a neutral color or maintain current cell color
+            return "#f0f0f0"; // Light grey to denote no data or zero
+        }
 
-    <script>
-        // Prepare data for chart
-        const cohortData = {{ cohort_data | tojson }};
-        const labels = Object.keys(cohortData);
-        const datasets = Object.keys(cohortData[labels[0]]).map(function(period, index) {
-            return {
-                label: 'Month ' + period,
-                data: labels.map(function(label) { return cohortData[label][period]; }),
-                borderColor: `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`,
-                fill: false
-            };
+        // Normalize the value within the range, ignoring zero
+        const ratio = (value - minValue) / (maxValue - minValue);
+        
+        // // Use HSL for smoother color transitions
+        // // Setting the hue dynamically between 0 (red) to 120 (green) degrees
+        // let hue = (ratio * 120).toString(10);
+        
+        // Calculate lightness; higher values should be darker
+        let lightness = 90 - ratio * 50; // Ranges from 50% (dark blue) to 100% (light blue)
+    
+
+        // Return the CSS HSL string, adjusting lightness and saturation as needed
+        return `hsl(240, 100%, ${lightness}%)`;
+    }
+
+    // Function to render table with row-wise color scaling
+    function renderTable(data, tableId) {
+        const table = document.getElementById(tableId);
+        const keys = Object.keys(data);  // Cohort periods (rows)
+        const periods = Object.keys(data[keys[0]]);  // Period numbers (columns)
+
+        // Create table header
+        let headerRow = '<tr><th>Cohort</th>';
+        periods.forEach(period => {
+            headerRow += `<th>Month ${period}</th>`;
         });
+        headerRow += '</tr>';
+        table.innerHTML += headerRow;
 
-        // Create chart
-        const ctx = document.getElementById('cohortChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Customer Retention Over Time (Cohort Analysis)'
-                    },
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Cohort Month'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Retention (%)'
-                        },
-                        beginAtZero: true
-                    }
-                }
-            }
+        // Create table body with color scale per row
+        keys.forEach(cohort => {
+            const rowData = data[cohort];  // Data for the current row
+
+            // Calculate min and max values for each row to scale colors per row
+            const rowValues = Object.values(rowData);
+            const minValue = Math.min(...rowValues);
+            const maxValue = Math.max(...rowValues);
+
+            let row = `<tr><td>${cohort}</td>`;
+            periods.forEach(period => {
+                const value = rowData[period] || 0;
+                const color = getColor(value, minValue, maxValue);
+                row += `<td style="background-color: ${color};">${value}</td>`;
+            });
+            row += '</tr>';
+            table.innerHTML += row;
         });
-    </script>
+    }
+
+    // Render cohort and retention tables
+    renderTable(cohortData, 'cohortTable');
+    renderTable(retentionData, 'retentionTable');
+</script>
+
 </body>
 </html>
