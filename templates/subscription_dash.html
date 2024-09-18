@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Subscriptions Overview</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chartContainer { width: 80%; margin: 20px auto; }
+        table { width: 80%; margin: 20px auto; }
+        .dataTables_wrapper .dataTables_filter { float: right; }
+        .dataTables_wrapper .dataTables_length { float: left; }
+    </style>
+</head>
+<body>
+    <div id="chartContainer">
+        <canvas id="subscriptionsChart"></canvas>
+    </div>
+    <div style="width: 80%; margin: auto;">
+        <table id="dataSummary" class="display">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Subscriptions</th>
+                    <th>New Business MRR ($)</th>
+                    <th>Churn MRR ($)</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+
+    <script>
+          document.addEventListener('DOMContentLoaded', function() {
+        const rawData = {{ data | tojson | safe }};
+        const data = JSON.parse(rawData);
+
+
+            // Initialize the Chart
+            const ctx = document.getElementById('subscriptionsChart').getContext('2d');
+            const subscriptionsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => new Date(item.Date).toLocaleDateString()),
+                    datasets: [
+                        {
+                            label: 'Subscriptions',
+                            data: data.map(item => item.Subscriptions),
+                            borderColor: '#007bff',
+                            backgroundColor: 'transparent'
+                        },
+                        {
+                            label: 'New Business MRR',
+                            data: data.map(item => item['New Business MRR']),
+                            borderColor: '#28a745',
+                            backgroundColor: 'transparent'
+                        },
+                        {
+                            label: 'Churn MRR',
+                            data: data.map(item => item['Churn MRR']),
+                            borderColor: '#dc3545',
+                            backgroundColor: 'transparent'
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Initialize the Data Table
+            $('#dataSummary').DataTable({
+                data: data,
+                columns: [
+                    { data: 'Date', render: data => new Date(data).toLocaleDateString() },
+                    { data: 'Subscriptions' },
+                    { data: 'New Business MRR' },
+                    { data: 'Churn MRR' }
+                ]
+            });
+        });
+    </script>
+</body>
+</html>

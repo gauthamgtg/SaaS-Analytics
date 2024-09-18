@@ -1,5 +1,5 @@
 from operator import attrgetter
-from flask import Flask, render_template, request, redirect, url_for, Response, jsonify, session
+from flask import Flask, json, render_template, request, redirect, url_for, Response, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 import plotly.graph_objs as go
 import plotly.io as pio
@@ -1085,6 +1085,23 @@ def perform_cohort_analysis(df):
     retention_table = cohort_pivot.divide(cohort_size, axis=0)
 
     return cohort_pivot, retention_table
+
+
+@app.route('/subscription_dash')
+def subscriptions():
+    data = fetch_data()
+    data_json = json.dumps(data, default=str)  # Ensure everything is properly serialized
+    return render_template('subscription_dash.html', data=data_json)
+
+def fetch_data():
+    # Dummy data generation for demonstration
+    data = pd.DataFrame({
+        'Date': pd.date_range(start='2023-09-01', periods=12, freq='M'),
+        'Subscriptions': [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
+        'New Business MRR': [100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650],
+        'Churn MRR': [50, 40, 30, 20, 10, 0, 0, 10, 20, 30, 40, 50]
+    })
+    return data.to_dict(orient='records')  # Convert DataFrame to list of dicts
 
 if __name__ == '__main__':
     app.run(debug=True)
